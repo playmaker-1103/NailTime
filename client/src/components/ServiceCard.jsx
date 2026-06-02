@@ -1,0 +1,36 @@
+import { Clock, DollarSign, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function ServiceCard({ service, showBookButton = true }) {
+  return (
+    <article className="service-card">
+      <div className="service-card-top">
+        <span className="service-icon" aria-hidden="true">
+          <Sparkles size={20} />
+        </span>
+        {!service.isActive && <span className="pill muted">Inactive</span>}
+      </div>
+
+      <h3>{service.name}</h3>
+      <p>{service.description}</p>
+
+      <div className="service-meta">
+        <span>
+          <Clock size={16} aria-hidden="true" />
+          {service.durationMinutes} min
+        </span>
+        <span>
+          <DollarSign size={16} aria-hidden="true" />
+          {Number(service.price).toFixed(2)}
+        </span>
+      </div>
+
+      {showBookButton && (
+        <Link to={`/book?service=${service._id}`} className="button button-secondary full-width">
+          Book this service
+        </Link>
+      )}
+    </article>
+  );
+}
+
