@@ -1,8 +1,9 @@
-import { CalendarCheck, Info } from "lucide-react";
+import { CalendarCheck, Clock, Info, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LoadingState from "../components/LoadingState.jsx";
 import { api } from "../services/api.js";
+import { formatCurrency } from "../utils/formatters.js";
 
 const initialForm = {
   service: "",
@@ -165,12 +166,17 @@ export default function Booking() {
   }
 
   return (
-    <section className="content-shell section booking-layout">
-      <div>
-        <p className="eyebrow">Appointments</p>
-        <h1>Book an appointment</h1>
+    <section className="content-shell section booking-layout booking-page">
+      <div className="booking-intro">
+        <div className="booking-kicker">
+          <span aria-hidden="true">
+            <Sparkles size={16} />
+          </span>
+          Luna Nails Studio
+        </div>
+        <h1>Request your nail appointment</h1>
         <p className="page-copy">
-          Pick a service, choose an open time, and submit your details. No sign-in is needed.
+          Choose a service, pick an open slot, and send your details. No account needed.
         </p>
 
         <div className="notice-panel">
@@ -186,16 +192,31 @@ export default function Booking() {
 
         {selectedService && (
           <div className="selected-service-panel">
-            <h2>{selectedService.name}</h2>
-            <p>{selectedService.description}</p>
-            <strong>
-              {selectedService.durationMinutes} min · ${Number(selectedService.price).toFixed(2)}
-            </strong>
+            <div>
+              <span className="panel-label">Selected service</span>
+              <h2>{selectedService.name}</h2>
+              <p>{selectedService.description}</p>
+            </div>
+            <div className="selected-service-meta">
+              <span>
+                <Clock size={16} aria-hidden="true" />
+                {selectedService.durationMinutes} min
+              </span>
+              <strong>{formatCurrency(selectedService.price)}</strong>
+            </div>
           </div>
         )}
+
+        <div className="booking-photo" aria-hidden="true">
+          <img src="/images/salon-hero.png" alt="" />
+        </div>
       </div>
 
       <form className="form-panel" onSubmit={handleSubmit} noValidate>
+        <div className="form-panel-header">
+          <span className="panel-label">Booking request</span>
+          <h2>Your details</h2>
+        </div>
         {loading && <LoadingState message="Loading booking form..." />}
         {apiError && <p className="error-message">{apiError}</p>}
 

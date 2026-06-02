@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import LoadingState from "../components/LoadingState.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
+import { formatCurrency, formatDate } from "../utils/formatters.js";
 
 const statusOptions = ["pending", "confirmed", "cancelled", "completed"];
 const DEFAULT_COUNTRY_CODE = import.meta.env.VITE_DEFAULT_COUNTRY_CODE || "353";
@@ -52,6 +53,10 @@ function buildWhatsAppUrl(booking) {
   if (!phone) return "";
 
   return `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(booking))}`;
+}
+
+function getStatusLabel(status) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 export default function AdminDashboard() {
@@ -229,7 +234,7 @@ export default function AdminDashboard() {
     <section className="content-shell section dashboard">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Appointment list</p>
+          <span className="panel-label">Admin dashboard</span>
           <h1>Bookings and services</h1>
           {admin?.email && <p className="admin-session">Signed in as {admin.email}</p>}
         </div>
@@ -251,8 +256,8 @@ export default function AdminDashboard() {
       <section className="admin-notice-panel" aria-live="polite">
         <div className="admin-notice-header">
           <div>
-            <p className="eyebrow">New booking notice</p>
             <h2>WhatsApp follow-up</h2>
+            <p className="quiet-message">Pending requests that need a customer message.</p>
           </div>
           <span className="notice-count">
             <Bell size={17} aria-hidden="true" />
@@ -271,9 +276,10 @@ export default function AdminDashboard() {
                 <article className="notice-item" key={booking._id}>
                   <div>
                     <h3>{booking.customerName}</h3>
-                    <p>
-                      {booking.service?.name || "Deleted service"} · {booking.appointmentDate} at{" "}
-                      {booking.appointmentTime}
+                    <p className="notice-meta">
+                      <span>{booking.service?.name || "Deleted service"}</span>
+                      <span>{formatDate(booking.appointmentDate)}</span>
+                      <span>{booking.appointmentTime}</span>
                     </p>
                     <span>{booking.customerPhone}</span>
                   </div>
@@ -306,7 +312,7 @@ export default function AdminDashboard() {
               <option value="">All</option>
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
-                  {status}
+                  {getStatusLabel(status)}
                 </option>
               ))}
             </select>
@@ -337,17 +343,21 @@ export default function AdminDashboard() {
                     </td>
                     <td>{booking.service?.name || "Deleted service"}</td>
                     <td>
-                      {booking.appointmentDate}
+                      {formatDate(booking.appointmentDate)}
                       <span className="table-note">{booking.appointmentTime}</span>
                     </td>
                     <td>
+                      <span className={`pill status-pill ${booking.status}`}>
+                        {getStatusLabel(booking.status)}
+                      </span>
                       <select
+                        aria-label={`Change status for ${booking.customerName}`}
                         value={booking.status}
                         onChange={(event) => handleStatusChange(booking._id, event.target.value)}
                       >
                         {statusOptions.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {getStatusLabel(status)}
                           </option>
                         ))}
                       </select>
@@ -481,7 +491,10 @@ export default function AdminDashboard() {
                 <article className="service-admin-item" key={service._id}>
                   <div>
                     <h3>{service.name}</h3>
-                    <p>{service.durationMinutes} min · ${Number(service.price).toFixed(2)}</p>
+                    <p>
+                      <span>{service.durationMinutes} min</span>
+                      <span>{formatCurrency(service.price)}</span>
+                    </p>
                     {!service.isActive && <span className="pill muted">Inactive</span>}
                   </div>
                   <div className="button-row compact-buttons">

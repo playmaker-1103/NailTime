@@ -1,5 +1,6 @@
-import { Clock, DollarSign, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, Euro, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatCurrency } from "../utils/formatters.js";
 
 export default function ServiceCard({ service, showBookButton = true }) {
   return (
@@ -20,17 +21,17 @@ export default function ServiceCard({ service, showBookButton = true }) {
           {service.durationMinutes} min
         </span>
         <span>
-          <DollarSign size={16} aria-hidden="true" />
-          {Number(service.price).toFixed(2)}
+          <Euro size={16} aria-hidden="true" />
+          {formatCurrency(service.price)}
         </span>
       </div>
 
       {showBookButton && (
         <Link to={`/book?service=${service._id}`} className="button button-secondary full-width">
-          Book this service
+          Book
+          <ArrowRight size={17} aria-hidden="true" />
         </Link>
       )}
     </article>
   );
 }
-

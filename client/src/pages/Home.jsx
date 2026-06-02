@@ -38,11 +38,11 @@ export default function Home() {
             </p>
             <div className="hero-actions">
               <Link to="/book" className="button button-primary">
-                Book Appointment
+                Book
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
               <Link to="/services" className="button button-ghost">
-                View Services
+                Services
               </Link>
             </div>
           </div>
