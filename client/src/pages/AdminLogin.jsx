@@ -33,9 +33,10 @@ export default function AdminLogin() {
 
   return (
     <section className="content-shell section narrow-section">
-      <form className="form-panel" onSubmit={handleSubmit}>
+      <form className="form-panel login-panel" onSubmit={handleSubmit}>
         <p className="eyebrow">Admin</p>
         <h1>Sign in</h1>
+        <p className="page-copy">Use the salon owner account to manage bookings and services.</p>
         {error && <p className="error-message">{error}</p>}
 
         <label>
@@ -68,4 +69,3 @@ export default function AdminLogin() {
     </section>
   );
 }
-

@@ -1,4 +1,4 @@
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, Info } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LoadingState from "../components/LoadingState.jsx";
@@ -14,8 +14,22 @@ const initialForm = {
   notes: ""
 };
 
+const emptyAvailability = {
+  availableTimes: [],
+  bookedTimes: [],
+  notice: ""
+};
+
 function todayString() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function isFiveMinuteTime(time) {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+
+  if (!match) return false;
+
+  return Number(match[2]) % 5 === 0;
 }
 
 function validateBooking(form) {
@@ -25,6 +39,9 @@ function validateBooking(form) {
   if (!form.service) errors.service = "Please choose a service.";
   if (!form.appointmentDate) errors.appointmentDate = "Please choose a date.";
   if (!form.appointmentTime) errors.appointmentTime = "Please choose a time.";
+  if (form.appointmentTime && !isFiveMinuteTime(form.appointmentTime)) {
+    errors.appointmentTime = "Please choose a 5-minute time slot.";
+  }
   if (!form.customerName.trim()) errors.customerName = "Name is required.";
   if (!emailPattern.test(form.customerEmail)) errors.customerEmail = "Enter a valid email.";
   if (!form.customerPhone.trim()) errors.customerPhone = "Phone number is required.";
@@ -40,7 +57,9 @@ export default function Booking() {
   const [services, setServices] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
+  const [availability, setAvailability] = useState(emptyAvailability);
   const [loading, setLoading] = useState(true);
+  const [loadingTimes, setLoadingTimes] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
   const navigate = useNavigate();
@@ -49,7 +68,7 @@ export default function Booking() {
     async function loadServices() {
       try {
         const data = await api.getServices();
-        const selectedService = searchParams.get("service") || "";
+        const selectedService = searchParams.get("service") || data.services[0]?._id || "";
         setServices(data.services);
         setForm((current) => ({ ...current, service: selectedService }));
       } catch (err) {
@@ -62,6 +81,50 @@ export default function Booking() {
     loadServices();
   }, [searchParams]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAvailability() {
+      if (!form.appointmentDate) {
+        setAvailability(emptyAvailability);
+        return;
+      }
+
+      setLoadingTimes(true);
+      setApiError("");
+
+      try {
+        const data = await api.getAvailability(form.appointmentDate);
+
+        if (!isMounted) return;
+
+        setAvailability(data);
+        setForm((current) => {
+          if (!current.appointmentTime || data.availableTimes.includes(current.appointmentTime)) {
+            return current;
+          }
+
+          return { ...current, appointmentTime: "" };
+        });
+      } catch (err) {
+        if (isMounted) {
+          setAvailability(emptyAvailability);
+          setApiError(err.message);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingTimes(false);
+        }
+      }
+    }
+
+    loadAvailability();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [form.appointmentDate]);
+
   const selectedService = useMemo(
     () => services.find((service) => service._id === form.service),
     [form.service, services]
@@ -69,7 +132,11 @@ export default function Booking() {
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "appointmentDate" ? { appointmentTime: "" } : {})
+    }));
     setErrors((current) => ({ ...current, [name]: "" }));
   }
 
@@ -103,9 +170,19 @@ export default function Booking() {
         <p className="eyebrow">Appointments</p>
         <h1>Book an appointment</h1>
         <p className="page-copy">
-          Pick a service and send your appointment request. An admin can confirm, cancel, or
-          complete the booking from the dashboard.
+          Pick a service, choose an open time, and submit your details. No sign-in is needed.
         </p>
+
+        <div className="notice-panel">
+          <Info size={20} aria-hidden="true" />
+          <div>
+            <strong>Customer notice</strong>
+            <p>
+              Appointment times are listed every 5 minutes. Booked times are hidden automatically,
+              and the system will not allow two appointments at the same time.
+            </p>
+          </div>
+        </div>
 
         {selectedService && (
           <div className="selected-service-panel">
@@ -154,12 +231,31 @@ export default function Booking() {
 
               <label>
                 Time
-                <input
-                  type="time"
+                <select
                   name="appointmentTime"
                   value={form.appointmentTime}
                   onChange={handleChange}
-                />
+                  disabled={
+                    !form.appointmentDate ||
+                    loadingTimes ||
+                    availability.availableTimes.length === 0
+                  }
+                >
+                  <option value="">
+                    {!form.appointmentDate
+                      ? "Choose a date first"
+                      : loadingTimes
+                        ? "Loading times..."
+                        : availability.availableTimes.length === 0
+                          ? "No available times"
+                          : "Choose a time"}
+                  </option>
+                  {availability.availableTimes.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
                 {errors.appointmentTime && (
                   <span className="field-error">{errors.appointmentTime}</span>
                 )}
@@ -200,7 +296,7 @@ export default function Booking() {
                   name="customerPhone"
                   value={form.customerPhone}
                   onChange={handleChange}
-                  placeholder="555-0147"
+                  placeholder="087 123 4567"
                 />
                 {errors.customerPhone && (
                   <span className="field-error">{errors.customerPhone}</span>
@@ -229,4 +325,3 @@ export default function Booking() {
     </section>
   );
 }
-

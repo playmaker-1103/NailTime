@@ -2,7 +2,7 @@
   "name": "nails-booking-server",
   "version": "1.0.0",
   "private": true,
-  "description": "Express and MongoDB API for a nail salon booking app.",
+  "description": "Express and Supabase API for a nail salon booking app.",
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
@@ -11,11 +11,11 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.6.3"
+    "jsonwebtoken": "^9.0.3"
   },
   "jest": {
     "testEnvironment": "node",
@@ -25,7 +25,6 @@
   },
   "devDependencies": {
     "jest": "^30.4.2",
-    "mongodb-memory-server": "^11.2.0",
     "nodemon": "^3.1.14",
     "supertest": "^7.2.2"
   }

@@ -1,27 +1,32 @@
 # Luna Nails Studio Booking App
 
-A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can browse services and submit booking requests, while an admin can manage bookings and nail services from a protected dashboard.
+A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment times every 5 minutes and prevents two active appointments from using the same date and time.
 
 ## Features
 
-- Public home page with featured services and booking call to action
+- Booking-first home page
 - Services page with prices, descriptions, and durations
 - Booking form with frontend and backend validation
+- Customer notice explaining slot behavior
+- Appointment time dropdown with 5-minute slots
+- Availability endpoint that hides booked times
+- Duplicate booking protection for the same date and time
 - Booking confirmation page
-- JWT-based admin login from environment variables
-- Protected admin dashboard for booking status updates
-- Admin service create, edit, delete, and active/inactive controls
-- MongoDB models with Mongoose timestamps
+- Appointment notice panel with WhatsApp follow-up links
+- JWT admin login for protected appointment and service management
+- Protected appointment dashboard for booking status updates
+- Service create, edit, delete, and active/inactive controls
+- Supabase Postgres tables with timestamp triggers
 - Seed script for sample salon services
-- Basic backend route tests with Jest, Supertest, and MongoDB Memory Server
+- Basic backend route tests with Jest, Supertest, and a mocked Supabase client
 
 ## Tech Stack
 
 - Frontend: React, Vite, React Router, plain CSS
 - Backend: Node.js, Express.js
-- Database: MongoDB with Mongoose
-- Authentication: JWT admin login
-- Testing: Jest, Supertest, MongoDB Memory Server
+- Database: Supabase Postgres
+- Authentication: JWT admin login for owner-only management
+- Testing: Jest, Supertest, mocked Supabase client
 - Package manager: npm
 
 ## Folder Structure
@@ -32,7 +37,6 @@ nails-booking-app/
     public/images/
     src/
       components/
-      context/
       pages/
       services/
       App.jsx
@@ -41,10 +45,10 @@ nails-booking-app/
   server/
     config/
     controllers/
-    middleware/
-    models/
+    migrations/
     routes/
     tests/
+    utils/
     app.js
     seed.js
     server.js
@@ -74,7 +78,9 @@ cp server/.env.example server/.env
 cp client/.env.example client/.env
 ```
 
-Start MongoDB locally, then seed sample services:
+Create a Supabase project, then run the SQL in `server/migrations/001_create_supabase_schema.sql` in the Supabase SQL editor.
+
+Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to `server/.env`, then seed sample services:
 
 ```bash
 cd server
@@ -103,55 +109,49 @@ Backend `server/.env`:
 
 ```env
 PORT=5050
-MONGO_URI=mongodb://127.0.0.1:27017/nails-booking-app
-JWT_SECRET=replace-with-a-long-random-secret
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=password123
 CLIENT_URL=http://localhost:5173
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-me-admin-password
+JWT_SECRET=change-me-long-random-secret
+JWT_EXPIRES_IN=1d
 ```
 
 Frontend `client/.env`:
 
 ```env
 VITE_API_URL=http://localhost:5050/api
+VITE_DEFAULT_COUNTRY_CODE=353
 ```
 
-The admin password is compared as plain text to keep the project easy to understand. Before production, store a hashed password or use a real authentication provider.
+`VITE_DEFAULT_COUNTRY_CODE` is used when a customer enters a local phone number that starts with `0`. For example, `0871234567` becomes `353871234567` for WhatsApp links.
 
 ## API Endpoints
-
-Auth:
-
-- `POST /api/auth/login`
-- `GET /api/auth/me`
 
 Services:
 
 - `GET /api/services`
 - `GET /api/services/:id`
-- `POST /api/services` admin only
-- `PUT /api/services/:id` admin only
-- `DELETE /api/services/:id` admin only
+- `POST /api/services` admin JWT required
+- `PUT /api/services/:id` admin JWT required
+- `DELETE /api/services/:id` admin JWT required
 
 Bookings:
 
-- `GET /api/bookings` admin only
-- `GET /api/bookings/:id` admin only
+- `GET /api/bookings` admin JWT required
+- `GET /api/bookings/availability?date=YYYY-MM-DD`
+- `GET /api/bookings/:id` admin JWT required
 - `POST /api/bookings`
-- `PUT /api/bookings/:id/status` admin only
-- `DELETE /api/bookings/:id` admin only
+- `PUT /api/bookings/:id/status` admin JWT required
+- `DELETE /api/bookings/:id` admin JWT required
 
-## Admin Login Setup
+Auth:
 
-Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `JWT_SECRET` in `server/.env`. Use the same email and password on the `/admin/login` page.
+- `POST /api/auth/login`
+- `GET /api/auth/me` admin JWT required
 
-Example:
-
-```env
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=password123
-JWT_SECRET=change-this-secret
-```
+Service create, update, delete, and inactive service listing require an admin JWT. Customers can still view active services, check availability, and create bookings without signing in.
 
 ## Tests
 
@@ -162,24 +162,21 @@ cd server
 npm test
 ```
 
-The tests cover admin login, protected service creation, booking creation, booking validation, booking filtering, and status updates.
+The tests cover admin login, protected admin routes, service creation, booking creation, booking validation, 5-minute availability, duplicate booking prevention, filtering, and status updates.
 
 ## Screenshots
 
 Add screenshots here after running the app locally:
 
-- Home page
+- Booking page
 - Services page
-- Booking form
-- Admin dashboard
+- Appointment dashboard
 
 ## Future Improvements
 
-- Real user accounts
 - Email confirmation
 - Payment integration
-- Calendar availability system
-- Better admin security with hashed passwords and refresh strategy
+- Staff calendar and service-duration-aware availability
+- Better admin security
 - Deployment instructions
 - Admin search and pagination for large booking lists
-- Prevent double bookings for the same date and time

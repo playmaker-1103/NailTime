@@ -80,15 +80,14 @@ export default function Home() {
           </span>
           <span>
             <CheckCircle2 size={18} aria-hidden="true" />
-            Admin status updates
+            5-minute time slots
           </span>
           <span>
             <CheckCircle2 size={18} aria-hidden="true" />
-            Service management
+            No double bookings
           </span>
         </div>
       </section>
     </>
   );
 }
-

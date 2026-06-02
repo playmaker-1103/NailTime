@@ -1,5 +1,5 @@
-const mongoose = require("mongoose");
-const Service = require("../models/Service");
+const supabase = require("../config/supabase");
+const { mapService, mapServicePayload } = require("../utils/dbMappers");
 
 function validateServiceInput(body) {
   const errors = [];
@@ -21,16 +21,28 @@ function validateServiceInput(body) {
   return { errors, durationMinutes, price };
 }
 
-function isValidId(id) {
-  return mongoose.Types.ObjectId.isValid(id);
+function isValidUuid(id) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    id
+  );
 }
 
 async function getServices(req, res) {
   try {
     const includeInactive = req.query.includeInactive === "true";
-    const filter = includeInactive ? {} : { isActive: true };
-    const services = await Service.find(filter).sort({ createdAt: -1 });
-    return res.json({ services });
+    let query = supabase.from("services").select("*").order("created_at", { ascending: false });
+
+    if (!includeInactive) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return res.status(500).json({ message: "Could not fetch services" });
+    }
+
+    return res.json({ services: data.map(mapService) });
   } catch (error) {
     return res.status(500).json({ message: "Could not fetch services" });
   }
@@ -38,17 +50,25 @@ async function getServices(req, res) {
 
 async function getServiceById(req, res) {
   try {
-    if (!isValidId(req.params.id)) {
+    if (!isValidUuid(req.params.id)) {
       return res.status(400).json({ message: "Invalid service id" });
     }
 
-    const service = await Service.findById(req.params.id);
+    const { data, error } = await supabase
+      .from("services")
+      .select("*")
+      .eq("id", req.params.id)
+      .maybeSingle();
 
-    if (!service) {
+    if (error) {
+      return res.status(500).json({ message: "Could not fetch service" });
+    }
+
+    if (!data) {
       return res.status(404).json({ message: "Service not found" });
     }
 
-    return res.json({ service });
+    return res.json({ service: mapService(data) });
   } catch (error) {
     return res.status(500).json({ message: "Could not fetch service" });
   }
@@ -62,15 +82,17 @@ async function createService(req, res) {
       return res.status(400).json({ message: errors.join(". ") });
     }
 
-    const service = await Service.create({
-      name: req.body.name.trim(),
-      description: req.body.description || "",
-      durationMinutes,
-      price,
-      isActive: req.body.isActive ?? true
-    });
+    const { data, error } = await supabase
+      .from("services")
+      .insert(mapServicePayload({ ...req.body, durationMinutes, price }))
+      .select("*")
+      .single();
 
-    return res.status(201).json({ service });
+    if (error) {
+      return res.status(500).json({ message: "Could not create service" });
+    }
+
+    return res.status(201).json({ service: mapService(data) });
   } catch (error) {
     return res.status(500).json({ message: "Could not create service" });
   }
@@ -78,7 +100,7 @@ async function createService(req, res) {
 
 async function updateService(req, res) {
   try {
-    if (!isValidId(req.params.id)) {
+    if (!isValidUuid(req.params.id)) {
       return res.status(400).json({ message: "Invalid service id" });
     }
 
@@ -88,23 +110,22 @@ async function updateService(req, res) {
       return res.status(400).json({ message: errors.join(". ") });
     }
 
-    const service = await Service.findByIdAndUpdate(
-      req.params.id,
-      {
-        name: req.body.name.trim(),
-        description: req.body.description || "",
-        durationMinutes,
-        price,
-        isActive: req.body.isActive ?? true
-      },
-      { returnDocument: "after", runValidators: true }
-    );
+    const { data, error } = await supabase
+      .from("services")
+      .update(mapServicePayload({ ...req.body, durationMinutes, price }))
+      .eq("id", req.params.id)
+      .select("*")
+      .maybeSingle();
 
-    if (!service) {
+    if (error) {
+      return res.status(500).json({ message: "Could not update service" });
+    }
+
+    if (!data) {
       return res.status(404).json({ message: "Service not found" });
     }
 
-    return res.json({ service });
+    return res.json({ service: mapService(data) });
   } catch (error) {
     return res.status(500).json({ message: "Could not update service" });
   }
@@ -112,13 +133,22 @@ async function updateService(req, res) {
 
 async function deleteService(req, res) {
   try {
-    if (!isValidId(req.params.id)) {
+    if (!isValidUuid(req.params.id)) {
       return res.status(400).json({ message: "Invalid service id" });
     }
 
-    const service = await Service.findByIdAndDelete(req.params.id);
+    const { data, error } = await supabase
+      .from("services")
+      .delete()
+      .eq("id", req.params.id)
+      .select("id")
+      .maybeSingle();
 
-    if (!service) {
+    if (error) {
+      return res.status(500).json({ message: "Could not delete service" });
+    }
+
+    if (!data) {
       return res.status(404).json({ message: "Service not found" });
     }
 

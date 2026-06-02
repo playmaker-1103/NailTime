@@ -14,7 +14,8 @@ export default function App() {
       <Navbar />
       <main>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Booking />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/services" element={<Services />} />
           <Route path="/book" element={<Booking />} />
           <Route path="/booking-success" element={<BookingSuccess />} />
@@ -32,4 +33,3 @@ export default function App() {
     </>
   );
 }
-

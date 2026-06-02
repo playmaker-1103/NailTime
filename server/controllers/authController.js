@@ -8,7 +8,13 @@ function buildAdminResponse(email) {
 }
 
 function createToken(admin) {
-  return jwt.sign(admin, process.env.JWT_SECRET, { expiresIn: "1d" });
+  return jwt.sign(admin, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || "1d"
+  });
+}
+
+function hasAdminConfig() {
+  return process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && process.env.JWT_SECRET;
 }
 
 async function login(req, res) {
@@ -18,7 +24,7 @@ async function login(req, res) {
     return res.status(400).json({ message: "Email and password are required" });
   }
 
-  if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD || !process.env.JWT_SECRET) {
+  if (!hasAdminConfig()) {
     return res.status(500).json({ message: "Admin environment variables are not configured" });
   }
 
@@ -40,4 +46,3 @@ async function me(req, res) {
 }
 
 module.exports = { login, me };
-

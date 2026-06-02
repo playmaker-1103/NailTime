@@ -1,31 +1,59 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const ADMIN_TOKEN_KEY = "adminToken";
+
+export function getAdminToken() {
+  if (typeof window === "undefined") return null;
+
+  return window.localStorage.getItem(ADMIN_TOKEN_KEY);
+}
+
+export function setAdminToken(token) {
+  window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
+}
+
+export function clearAdminToken() {
+  window.localStorage.removeItem(ADMIN_TOKEN_KEY);
+}
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem("adminToken");
+  const { auth = true, ...fetchOptions } = options;
+  const token = getAdminToken();
   const headers = {
     "Content-Type": "application/json",
-    ...options.headers
+    ...fetchOptions.headers
   };
 
-  if (token) {
+  if (auth && token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(data?.message || "Something went wrong. Please try again.");
+    const error = new Error(data?.message || "Something went wrong. Please try again.");
+    error.status = response.status;
+    throw error;
   }
 
   return data;
 }
 
 export const api = {
+  login(credentials) {
+    return request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+      auth: false
+    });
+  },
+  me() {
+    return request("/auth/me");
+  },
   getServices(includeInactive = false) {
     const query = includeInactive ? "?includeInactive=true" : "";
     return request(`/services${query}`);
@@ -54,6 +82,9 @@ export const api = {
       body: JSON.stringify(booking)
     });
   },
+  getAvailability(date) {
+    return request(`/bookings/availability?date=${encodeURIComponent(date)}`);
+  },
   getBookings(status = "") {
     const query = status ? `?status=${status}` : "";
     return request(`/bookings${query}`);
@@ -69,15 +100,5 @@ export const api = {
   },
   deleteBooking(id) {
     return request(`/bookings/${id}`, { method: "DELETE" });
-  },
-  login(credentials) {
-    return request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(credentials)
-    });
-  },
-  me() {
-    return request("/auth/me");
   }
 };
-

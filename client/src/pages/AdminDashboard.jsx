@@ -1,9 +1,11 @@
-import { Edit3, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { Bell, Edit3, LogOut, MessageCircle, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import LoadingState from "../components/LoadingState.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
 
 const statusOptions = ["pending", "confirmed", "cancelled", "completed"];
+const DEFAULT_COUNTRY_CODE = import.meta.env.VITE_DEFAULT_COUNTRY_CODE || "353";
 
 const emptyServiceForm = {
   name: "",
@@ -13,13 +15,55 @@ const emptyServiceForm = {
   isActive: true
 };
 
+function normalizePhoneForWhatsApp(phone) {
+  const trimmedPhone = phone.trim();
+  const digits = trimmedPhone.replace(/\D/g, "");
+
+  if (!digits) return "";
+  if (trimmedPhone.startsWith("+")) return digits;
+  if (digits.startsWith("00")) return digits.slice(2);
+  if (digits.startsWith("0")) return `${DEFAULT_COUNTRY_CODE}${digits.slice(1)}`;
+
+  return digits;
+}
+
+function buildWhatsAppMessage(booking) {
+  const serviceName = booking.service?.name || "your nail service";
+  const appointmentDetails = `${serviceName} on ${booking.appointmentDate} at ${booking.appointmentTime}`;
+
+  if (booking.status === "confirmed") {
+    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Luna Nails Studio is confirmed. Please reply here if you need to change anything.`;
+  }
+
+  if (booking.status === "cancelled") {
+    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Luna Nails Studio has been cancelled. Please reply here if you would like another time.`;
+  }
+
+  if (booking.status === "completed") {
+    return `Hi ${booking.customerName}, thank you for visiting Luna Nails Studio for ${serviceName}. We hope to see you again soon.`;
+  }
+
+  return `Hi ${booking.customerName}, Luna Nails Studio received your appointment request for ${appointmentDetails}. Please reply here to confirm this time works for you.`;
+}
+
+function buildWhatsAppUrl(booking) {
+  const phone = normalizePhoneForWhatsApp(booking.customerPhone);
+
+  if (!phone) return "";
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(buildWhatsAppMessage(booking))}`;
+}
+
 export default function AdminDashboard() {
+  const { admin, logout } = useAuth();
   const [bookingFilter, setBookingFilter] = useState("");
   const [bookings, setBookings] = useState([]);
+  const [pendingNotices, setPendingNotices] = useState([]);
   const [services, setServices] = useState([]);
   const [serviceForm, setServiceForm] = useState(emptyServiceForm);
   const [editingServiceId, setEditingServiceId] = useState(null);
   const [loadingBookings, setLoadingBookings] = useState(true);
+  const [loadingNotices, setLoadingNotices] = useState(true);
   const [loadingServices, setLoadingServices] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -30,6 +74,15 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     loadServices();
+
+    loadPendingNotices();
+    const noticeTimer = window.setInterval(() => {
+      loadPendingNotices({ silent: true });
+    }, 15000);
+
+    return () => {
+      window.clearInterval(noticeTimer);
+    };
   }, []);
 
   async function loadBookings(status = "") {
@@ -43,6 +96,25 @@ export default function AdminDashboard() {
       setError(err.message);
     } finally {
       setLoadingBookings(false);
+    }
+  }
+
+  async function loadPendingNotices(options = {}) {
+    if (!options.silent) {
+      setLoadingNotices(true);
+    }
+
+    try {
+      const data = await api.getBookings("pending");
+      setPendingNotices(data.bookings);
+    } catch (err) {
+      if (!options.silent) {
+        setError(err.message);
+      }
+    } finally {
+      if (!options.silent) {
+        setLoadingNotices(false);
+      }
     }
   }
 
@@ -66,6 +138,7 @@ export default function AdminDashboard() {
       setBookings((current) =>
         current.map((booking) => (booking._id === bookingId ? data.booking : booking))
       );
+      loadPendingNotices({ silent: true });
       setMessage("Booking status updated.");
     } catch (err) {
       setError(err.message);
@@ -78,6 +151,7 @@ export default function AdminDashboard() {
     try {
       await api.deleteBooking(bookingId);
       setBookings((current) => current.filter((booking) => booking._id !== bookingId));
+      setPendingNotices((current) => current.filter((booking) => booking._id !== bookingId));
       setMessage("Booking deleted.");
     } catch (err) {
       setError(err.message);
@@ -155,17 +229,73 @@ export default function AdminDashboard() {
     <section className="content-shell section dashboard">
       <div className="section-heading">
         <div>
-          <p className="eyebrow">Admin dashboard</p>
+          <p className="eyebrow">Appointment list</p>
           <h1>Bookings and services</h1>
+          {admin?.email && <p className="admin-session">Signed in as {admin.email}</p>}
         </div>
-        <button type="button" className="button button-secondary" onClick={() => loadBookings(bookingFilter)}>
-          <RefreshCw size={17} aria-hidden="true" />
-          Refresh
-        </button>
+        <div className="button-row dashboard-actions">
+          <button type="button" className="button button-secondary" onClick={() => loadBookings(bookingFilter)}>
+            <RefreshCw size={17} aria-hidden="true" />
+            Refresh
+          </button>
+          <button type="button" className="button button-secondary" onClick={logout}>
+            <LogOut size={17} aria-hidden="true" />
+            Sign out
+          </button>
+        </div>
       </div>
 
       {message && <p className="success-message">{message}</p>}
       {error && <p className="error-message">{error}</p>}
+
+      <section className="admin-notice-panel" aria-live="polite">
+        <div className="admin-notice-header">
+          <div>
+            <p className="eyebrow">New booking notice</p>
+            <h2>WhatsApp follow-up</h2>
+          </div>
+          <span className="notice-count">
+            <Bell size={17} aria-hidden="true" />
+            {pendingNotices.length} pending
+          </span>
+        </div>
+
+        {loadingNotices ? (
+          <LoadingState message="Checking new appointments..." />
+        ) : pendingNotices.length > 0 ? (
+          <div className="notice-list">
+            {pendingNotices.map((booking) => {
+              const whatsappUrl = buildWhatsAppUrl(booking);
+
+              return (
+                <article className="notice-item" key={booking._id}>
+                  <div>
+                    <h3>{booking.customerName}</h3>
+                    <p>
+                      {booking.service?.name || "Deleted service"} · {booking.appointmentDate} at{" "}
+                      {booking.appointmentTime}
+                    </p>
+                    <span>{booking.customerPhone}</span>
+                  </div>
+                  {whatsappUrl && (
+                    <a
+                      className="button button-small button-whatsapp"
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <MessageCircle size={17} aria-hidden="true" />
+                      WhatsApp
+                    </a>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="quiet-message">No new appointment notices right now.</p>
+        )}
+      </section>
 
       <section className="admin-section">
         <div className="admin-section-header">
@@ -227,14 +357,27 @@ export default function AdminDashboard() {
                       <span className="table-note">{booking.customerPhone}</span>
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="icon-button danger"
-                        onClick={() => handleDeleteBooking(booking._id)}
-                        title="Delete booking"
-                      >
-                        <Trash2 size={17} aria-hidden="true" />
-                      </button>
+                      <div className="table-actions">
+                        {buildWhatsAppUrl(booking) && (
+                          <a
+                            className="icon-button whatsapp"
+                            href={buildWhatsAppUrl(booking)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Message customer on WhatsApp"
+                          >
+                            <MessageCircle size={17} aria-hidden="true" />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          className="icon-button danger"
+                          onClick={() => handleDeleteBooking(booking._id)}
+                          title="Delete booking"
+                        >
+                          <Trash2 size={17} aria-hidden="true" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -368,4 +511,3 @@ export default function AdminDashboard() {
     </section>
   );
 }
-

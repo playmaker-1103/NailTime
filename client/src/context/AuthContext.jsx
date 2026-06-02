@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api } from "../services/api.js";
+import { api, clearAdminToken, getAdminToken, setAdminToken } from "../services/api.js";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem("adminToken"));
+  const [token, setToken] = useState(() => getAdminToken());
   const [admin, setAdmin] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(Boolean(token));
 
@@ -18,13 +18,17 @@ export function AuthProvider({ children }) {
         return;
       }
 
+      setCheckingAuth(true);
+
       try {
         const data = await api.me();
+
         if (isMounted) {
           setAdmin(data.admin);
         }
       } catch {
-        localStorage.removeItem("adminToken");
+        clearAdminToken();
+
         if (isMounted) {
           setToken(null);
           setAdmin(null);
@@ -45,13 +49,13 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const data = await api.login({ email, password });
-    localStorage.setItem("adminToken", data.token);
+    setAdminToken(data.token);
     setToken(data.token);
     setAdmin(data.admin);
   }
 
   function logout() {
-    localStorage.removeItem("adminToken");
+    clearAdminToken();
     setToken(null);
     setAdmin(null);
   }
@@ -73,4 +77,3 @@ export function useAuth() {
 
   return context;
 }
-

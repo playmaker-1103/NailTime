@@ -12,11 +12,12 @@ export default function BookingSuccess() {
         <span className="success-icon" aria-hidden="true">
           <CalendarDays size={30} />
         </span>
-        <p className="eyebrow">Request submitted</p>
-        <h1>Your appointment request is in</h1>
+        <p className="eyebrow">Appointment received</p>
+        <h1>Your booking is in</h1>
         <p>
-          Thanks for booking with Luna Nails Studio. We received your request
-          {serviceName ? ` for ${serviceName}` : ""} and will update the status soon.
+          Thanks for booking with Luna Nails Studio. We received your appointment
+          {serviceName ? ` for ${serviceName}` : ""}. If anything needs to change, the salon will
+          contact you using the details you provided.
         </p>
         {booking && (
           <div className="confirmation-details">
@@ -37,4 +38,3 @@ export default function BookingSuccess() {
     </section>
   );
 }
-

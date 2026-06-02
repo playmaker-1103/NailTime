@@ -1,7 +1,6 @@
 require("dotenv").config();
 
-const connectDB = require("./config/db");
-const Service = require("./models/Service");
+const supabase = require("./config/supabase");
 
 const sampleServices = [
   {
@@ -44,15 +43,33 @@ const sampleServices = [
 
 async function seed() {
   try {
-    await connectDB();
-    const existingCount = await Service.countDocuments();
+    const { count, error: countError } = await supabase
+      .from("services")
+      .select("id", { count: "exact", head: true });
 
-    if (existingCount > 0) {
+    if (countError) {
+      throw countError;
+    }
+
+    if (count > 0) {
       console.log("Services already exist. Seed skipped.");
       process.exit(0);
     }
 
-    await Service.insertMany(sampleServices);
+    const { error } = await supabase.from("services").insert(
+      sampleServices.map((service) => ({
+        name: service.name,
+        description: service.description,
+        duration_minutes: service.durationMinutes,
+        price: service.price,
+        is_active: true
+      }))
+    );
+
+    if (error) {
+      throw error;
+    }
+
     console.log("Sample services created.");
     process.exit(0);
   } catch (error) {
@@ -62,4 +79,3 @@ async function seed() {
 }
 
 seed();
-
