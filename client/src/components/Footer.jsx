@@ -1,14 +1,13 @@
 import { CalendarDays, Mail, MapPin, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
+import BrandLogo from "./BrandLogo.jsx";
 
 export default function Footer() {
   return (
     <footer className="site-footer">
       <div className="content-shell footer-grid">
         <div>
-          <Link to="/" className="brand footer-brand">
-            Honey Nails
-          </Link>
+          <BrandLogo className="footer-brand" />
           <p>
             Calm nail care, clean appointment timing, and a simple request flow for polished hands
             without the back-and-forth.

@@ -41,7 +41,7 @@ export default function Services() {
       </div>
 
       <div className="services-feature">
-        <img src="/images/salon-hero.png" alt="A nail technician applying soft pink polish in the studio." />
+        <img src="/images/salon-hero.png" alt="A nail technician applying glossy polish in the studio." />
         <div>
           <span className="panel-label">Studio rhythm</span>
           <h2>Soft color, careful prep, clean timing</h2>

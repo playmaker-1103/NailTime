@@ -1,13 +1,12 @@
 import { CalendarDays, ClipboardList, Phone } from "lucide-react";
-import { NavLink, Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import BrandLogo from "./BrandLogo.jsx";
 
 export default function Navbar() {
   return (
     <header className="site-header">
       <nav className="navbar content-shell" aria-label="Main navigation">
-        <Link to="/" className="brand">
-          Honey Nails
-        </Link>
+        <BrandLogo />
 
         <div className="nav-links">
           <NavLink to="/services">Services</NavLink>

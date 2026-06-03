@@ -98,21 +98,21 @@ This is operational UI, not a landing page. Prioritize readable tables, predicta
 
 ## Visual System
 
-Tone: warm, polished, calm, and functional.
+Tone: warm, polished, honeyed, calm, and functional.
 
-The customer side can feel soft and welcoming. The admin side should feel more utilitarian and organized.
+The customer side can feel soft, golden, and welcoming. The admin side should feel more utilitarian and organized.
 
 Palette:
 
-- Background: soft warm off-white
+- Background: warm cream / soft honey off-white
 - Surface: white
-- Primary: deep rose
+- Primary: honey amber / warm cocoa
 - Secondary: sage
-- Accent: muted gold
+- Accent: pale honey gold
 - Danger: muted red
-- Text: warm dark ink
+- Text: warm dark cocoa ink
 
-Rose is the brand accent, not the whole design. Avoid making the interface feel like a single-color theme.
+Honey amber is the brand accent, not the whole design. Avoid making the interface feel like a single-color yellow/brown theme; keep sage and cream in the system for balance.
 
 Typography:
 
