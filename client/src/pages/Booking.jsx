@@ -1,4 +1,14 @@
-import { CalendarCheck, Clock, Info, Sparkles } from "lucide-react";
+import {
+  CalendarCheck,
+  CheckCircle2,
+  Clock,
+  Info,
+  MapPin,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  Star
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import LoadingState from "../components/LoadingState.jsx";
@@ -184,13 +194,14 @@ export default function Booking() {
           </div>
           <h1>Request your nail appointment</h1>
           <p className="page-copy">
-            Choose a service, pick an open slot, and send your details. No account needed.
+            Choose a service, pick an open slot, and send your details. We will confirm your
+            request by message so your visit is calm from the first tap.
           </p>
         </div>
         <div className="booking-facts" aria-label="Booking notes">
-          <span>Public booking</span>
-          <span>5-minute slots</span>
-          <span>No double booking</span>
+          <span>Open daily 09:00-18:00</span>
+          <span>Instant slot check</span>
+          <span>WhatsApp follow-up</span>
         </div>
       </div>
 
@@ -222,10 +233,25 @@ export default function Booking() {
             <div>
               <strong>Customer notice</strong>
               <p>
-                Appointment times are listed every 5 minutes. Booked times are hidden automatically,
-                and the system will not allow two appointments at the same time.
+                Appointment requests are held as pending until the salon confirms. If a slot is
+                already booked, it disappears from the list automatically.
               </p>
             </div>
+          </div>
+
+          <div className="booking-assurance">
+            <span>
+              <ShieldCheck size={18} aria-hidden="true" />
+              Clean tools and careful prep
+            </span>
+            <span>
+              <MapPin size={18} aria-hidden="true" />
+              Dublin city studio
+            </span>
+            <span>
+              <MessageCircle size={18} aria-hidden="true" />
+              Replies by WhatsApp
+            </span>
           </div>
         </div>
 
@@ -366,6 +392,48 @@ export default function Booking() {
           </>
         )}
         </form>
+      </div>
+
+      <div className="content-shell market-sections">
+        <section className="trust-strip" aria-label="Why customers book with Luna Nails Studio">
+          <article>
+            <Star size={20} aria-hidden="true" />
+            <strong>Detailed finishes</strong>
+            <span>Shape, cuticle prep, color, and nail art are handled with enough time to feel considered.</span>
+          </article>
+          <article>
+            <Clock size={20} aria-hidden="true" />
+            <strong>Clear timing</strong>
+            <span>Availability updates from the live salon diary, so customers avoid unavailable times.</span>
+          </article>
+          <article>
+            <CheckCircle2 size={20} aria-hidden="true" />
+            <strong>Simple confirmation</strong>
+            <span>Every request lands in the admin dashboard ready for fast follow-up by WhatsApp.</span>
+          </article>
+        </section>
+
+        <section className="info-grid">
+          <div className="info-panel">
+            <span className="panel-label">Before you arrive</span>
+            <h2>A smoother studio visit</h2>
+            <ul className="clean-list">
+              <li>Arrive with a little time for color choice and nail-art discussion.</li>
+              <li>Add removal or repair notes in the booking form so the salon can prepare.</li>
+              <li>If you need to move your time, reply to the confirmation message.</li>
+            </ul>
+          </div>
+
+          <div className="info-panel">
+            <span className="panel-label">Customer care</span>
+            <h2>Policies made plain</h2>
+            <ul className="clean-list">
+              <li>Requests are pending until the studio confirms them.</li>
+              <li>Cancelled appointments release the time for another customer.</li>
+              <li>Prices and durations are shown before you send your request.</li>
+            </ul>
+          </div>
+        </section>
       </div>
     </section>
   );

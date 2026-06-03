@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import Footer from "./components/Footer.jsx";
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
@@ -30,6 +31,7 @@ export default function App() {
           />
         </Routes>
       </main>
+      <Footer />
     </>
   );
 }

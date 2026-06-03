@@ -1,3 +1,4 @@
+import { HelpCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import LoadingState from "../components/LoadingState.jsx";
@@ -45,8 +46,19 @@ export default function Services() {
           <span className="panel-label">Studio rhythm</span>
           <h2>Soft color, careful prep, clean timing</h2>
           <p>
-            Each appointment request checks availability before it reaches the salon, so customers only see open times.
+            Each appointment request checks availability before it reaches the salon, so customers
+            only see open times and the owner can confirm quickly.
           </p>
+          <div className="feature-points">
+            <span>
+              <Sparkles size={17} aria-hidden="true" />
+              Gel, BIAB, classic care, and nail art
+            </span>
+            <span>
+              <ShieldCheck size={17} aria-hidden="true" />
+              Active services are managed from the admin dashboard
+            </span>
+          </div>
         </div>
       </div>
 
@@ -63,6 +75,29 @@ export default function Services() {
             {services.map((service) => (
               <ServiceCard key={service._id} service={service} />
             ))}
+          </div>
+
+          <div className="service-note-grid">
+            <article className="info-panel">
+              <span className="panel-label">Choosing a service</span>
+              <h2>Not sure what to book?</h2>
+              <p>
+                Pick the closest service and add notes for removal, repairs, extensions, or nail
+                art. The salon can confirm timing before your appointment is accepted.
+              </p>
+            </article>
+            <article className="info-panel">
+              <span className="panel-label">Common questions</span>
+              <h2>
+                <HelpCircle size={24} aria-hidden="true" />
+                Good to know
+              </h2>
+              <ul className="clean-list">
+                <li>Appointment requests are pending until confirmed by the studio.</li>
+                <li>Booked times are hidden from the public booking form.</li>
+                <li>Irish phone numbers can be entered in local format.</li>
+              </ul>
+            </article>
           </div>
         </>
       )}

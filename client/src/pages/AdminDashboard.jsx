@@ -1,5 +1,17 @@
-import { Bell, Edit3, LogOut, MessageCircle, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  Bell,
+  CalendarClock,
+  Edit3,
+  LogOut,
+  MessageCircle,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Trash2,
+  X
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import LoadingState from "../components/LoadingState.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
@@ -59,9 +71,14 @@ function getStatusLabel(status) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function AdminDashboard() {
   const { admin, logout } = useAuth();
   const [bookingFilter, setBookingFilter] = useState("");
+  const [bookingSearch, setBookingSearch] = useState("");
   const [bookings, setBookings] = useState([]);
   const [pendingNotices, setPendingNotices] = useState([]);
   const [services, setServices] = useState([]);
@@ -72,6 +89,43 @@ export default function AdminDashboard() {
   const [loadingServices, setLoadingServices] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const dashboardStats = useMemo(() => {
+    const today = todayString();
+    const todayBookings = bookings.filter((booking) => booking.appointmentDate === today);
+    const confirmedBookings = bookings.filter((booking) => booking.status === "confirmed");
+    const activeServices = services.filter((service) => service.isActive);
+    const nextBooking =
+      bookings.find((booking) => ["pending", "confirmed"].includes(booking.status)) || null;
+
+    return {
+      todayBookings,
+      confirmedBookings,
+      activeServices,
+      nextBooking
+    };
+  }, [bookings, services]);
+
+  const visibleBookings = useMemo(() => {
+    const query = bookingSearch.trim().toLowerCase();
+
+    if (!query) return bookings;
+
+    return bookings.filter((booking) => {
+      const fields = [
+        booking.customerName,
+        booking.customerEmail,
+        booking.customerPhone,
+        booking.service?.name,
+        booking.appointmentDate,
+        booking.appointmentTime,
+        booking.status,
+        booking.notes
+      ];
+
+      return fields.some((field) => String(field || "").toLowerCase().includes(query));
+    });
+  }, [bookingSearch, bookings]);
 
   useEffect(() => {
     loadBookings(bookingFilter);
@@ -259,14 +313,36 @@ export default function AdminDashboard() {
           Pending
         </span>
         <span>
-          <strong>{bookings.length}</strong>
-          Showing
+          <strong>{dashboardStats.todayBookings.length}</strong>
+          Today
         </span>
         <span>
-          <strong>{services.length}</strong>
-          Services
+          <strong>{dashboardStats.confirmedBookings.length}</strong>
+          Confirmed
+        </span>
+        <span>
+          <strong>{dashboardStats.activeServices.length}</strong>
+          Active services
         </span>
       </div>
+
+      {dashboardStats.nextBooking && (
+        <section className="next-booking-panel" aria-label="Next appointment">
+          <CalendarClock size={22} aria-hidden="true" />
+          <div>
+            <span className="panel-label">Next appointment</span>
+            <h2>{dashboardStats.nextBooking.customerName}</h2>
+            <p>
+              {dashboardStats.nextBooking.service?.name || "Deleted service"} on{" "}
+              {formatDate(dashboardStats.nextBooking.appointmentDate)} at{" "}
+              {dashboardStats.nextBooking.appointmentTime}
+            </p>
+          </div>
+          <span className={`pill status-pill ${dashboardStats.nextBooking.status}`}>
+            {getStatusLabel(dashboardStats.nextBooking.status)}
+          </span>
+        </section>
+      )}
 
       <section className="admin-notice-panel" aria-live="polite">
         <div className="admin-notice-header">
@@ -321,17 +397,29 @@ export default function AdminDashboard() {
       <section className="admin-section">
         <div className="admin-section-header">
           <h2>Bookings</h2>
-          <label className="compact-label">
-            Status
-            <select value={bookingFilter} onChange={(event) => setBookingFilter(event.target.value)}>
-              <option value="">All</option>
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {getStatusLabel(status)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="booking-tools">
+            <label className="compact-label search-label">
+              <span className="visually-hidden">Search bookings</span>
+              <Search size={17} aria-hidden="true" />
+              <input
+                type="search"
+                value={bookingSearch}
+                onChange={(event) => setBookingSearch(event.target.value)}
+                placeholder="Search customer, phone, service"
+              />
+            </label>
+            <label className="compact-label">
+              Status
+              <select value={bookingFilter} onChange={(event) => setBookingFilter(event.target.value)}>
+                <option value="">All</option>
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {getStatusLabel(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
 
         {loadingBookings ? (
@@ -350,7 +438,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((booking) => (
+                {visibleBookings.map((booking) => (
                   <tr key={booking._id}>
                     <td>
                       <strong>{booking.customerName}</strong>
@@ -406,10 +494,10 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
-                {bookings.length === 0 && (
+                {visibleBookings.length === 0 && (
                   <tr>
                     <td colSpan="6" className="empty-cell">
-                      No bookings found.
+                      No bookings match this view.
                     </td>
                   </tr>
                 )}

@@ -1,4 +1,4 @@
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CheckCircle2, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { formatDate } from "../utils/formatters.js";
 
@@ -27,6 +27,16 @@ export default function BookingSuccess() {
             <span className={`pill status-pill ${booking.status}`}>{booking.status}</span>
           </div>
         )}
+        <div className="next-steps" aria-label="What happens next">
+          <span>
+            <CheckCircle2 size={17} aria-hidden="true" />
+            Your request is now pending in the salon diary.
+          </span>
+          <span>
+            <MessageCircle size={17} aria-hidden="true" />
+            The studio will follow up by phone or WhatsApp.
+          </span>
+        </div>
         <div className="hero-actions centered-actions">
           <Link to="/services" className="button button-secondary">
             Browse services

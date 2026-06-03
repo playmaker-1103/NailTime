@@ -8,12 +8,24 @@ const serviceRoutes = require("./routes/serviceRoutes");
 
 const app = express();
 
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
+app.use((req, res, next) => {
+  res.set({
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY"
+  });
+  next();
+});
+
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173"
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: "32kb" }));
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "Nails booking API is running" });

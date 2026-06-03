@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList } from "lucide-react";
+import { CalendarDays, ClipboardList, Phone } from "lucide-react";
 import { NavLink, Link } from "react-router-dom";
 
 export default function Navbar() {
@@ -11,6 +11,10 @@ export default function Navbar() {
 
         <div className="nav-links">
           <NavLink to="/services">Services</NavLink>
+          <a href="tel:+353871234567" className="nav-phone">
+            <Phone size={17} aria-hidden="true" />
+            <span>Call</span>
+          </a>
           <NavLink to="/" className="button button-small button-primary">
             <CalendarDays size={17} aria-hidden="true" />
             Book
