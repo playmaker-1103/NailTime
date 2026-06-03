@@ -1,4 +1,4 @@
-# Luna Nails Studio Booking App
+# Honey Nails Booking App
 
 A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment times every 5 minutes and prevents two active appointments from using the same date and time.
 

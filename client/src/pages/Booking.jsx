@@ -190,7 +190,7 @@ export default function Booking() {
             <span aria-hidden="true">
               <Sparkles size={16} />
             </span>
-            Luna Nails Studio
+            Honey Nails
           </div>
           <h1>Request your nail appointment</h1>
           <p className="page-copy">
@@ -395,7 +395,7 @@ export default function Booking() {
       </div>
 
       <div className="content-shell market-sections">
-        <section className="trust-strip" aria-label="Why customers book with Luna Nails Studio">
+        <section className="trust-strip" aria-label="Why customers book with Honey Nails">
           <article>
             <Star size={20} aria-hidden="true" />
             <strong>Detailed finishes</strong>

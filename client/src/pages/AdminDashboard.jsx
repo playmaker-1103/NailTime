@@ -45,18 +45,18 @@ function buildWhatsAppMessage(booking) {
   const appointmentDetails = `${serviceName} on ${booking.appointmentDate} at ${booking.appointmentTime}`;
 
   if (booking.status === "confirmed") {
-    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Luna Nails Studio is confirmed. Please reply here if you need to change anything.`;
+    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Honey Nails is confirmed. Please reply here if you need to change anything.`;
   }
 
   if (booking.status === "cancelled") {
-    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Luna Nails Studio has been cancelled. Please reply here if you would like another time.`;
+    return `Hi ${booking.customerName}, your ${appointmentDetails} appointment at Honey Nails has been cancelled. Please reply here if you would like another time.`;
   }
 
   if (booking.status === "completed") {
-    return `Hi ${booking.customerName}, thank you for visiting Luna Nails Studio for ${serviceName}. We hope to see you again soon.`;
+    return `Hi ${booking.customerName}, thank you for visiting Honey Nails for ${serviceName}. We hope to see you again soon.`;
   }
 
-  return `Hi ${booking.customerName}, Luna Nails Studio received your appointment request for ${appointmentDetails}. Please reply here to confirm this time works for you.`;
+  return `Hi ${booking.customerName}, Honey Nails received your appointment request for ${appointmentDetails}. Please reply here to confirm this time works for you.`;
 }
 
 function buildWhatsAppUrl(booking) {

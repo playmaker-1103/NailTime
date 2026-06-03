@@ -31,7 +31,7 @@ export default function Home() {
         <div className="hero-overlay">
           <div className="content-shell hero-content">
             <p className="eyebrow">Modern nail care in the heart of town</p>
-            <h1>Luna Nails Studio</h1>
+            <h1>Honey Nails</h1>
             <p className="hero-copy">
               Thoughtful manicures, pedicures, gel sets, and nail art in a calm studio built for
               easy appointment requests.

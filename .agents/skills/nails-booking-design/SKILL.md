@@ -1,13 +1,13 @@
 ---
 name: nails-booking-design
-description: Design system and UX guidance for the Luna Nails Studio booking app. Use when making UI, layout, product flow, styling, copy, accessibility, or screen-level changes for the customer booking flow, services page, admin login, or admin dashboard.
+description: Design system and UX guidance for the Honey Nails booking app. Use when making UI, layout, product flow, styling, copy, accessibility, or screen-level changes for the customer booking flow, services page, admin login, or admin dashboard.
 ---
 
 # Nails Booking Design
 
 ## Product Direction
 
-Luna Nails Studio is a booking-first salon web app. The first screen should help a customer choose a service and request an appointment without friction. The admin experience should feel like a quiet operations dashboard for managing appointments and services.
+Honey Nails is a booking-first salon web app. The first screen should help a customer choose a service and request an appointment without friction. The admin experience should feel like a quiet operations dashboard for managing appointments and services.
 
 ## Audience
 

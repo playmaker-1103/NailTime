@@ -6,7 +6,7 @@ export default function Navbar() {
     <header className="site-header">
       <nav className="navbar content-shell" aria-label="Main navigation">
         <Link to="/" className="brand">
-          Luna Nails Studio
+          Honey Nails
         </Link>
 
         <div className="nav-links">

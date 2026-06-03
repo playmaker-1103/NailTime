@@ -1,5 +1,5 @@
 process.env.CLIENT_URL = "http://localhost:5173";
-process.env.ADMIN_EMAIL = "owner@lunanails.test";
+process.env.ADMIN_EMAIL = "owner@honeynails.test";
 process.env.ADMIN_PASSWORD = "secret-password";
 process.env.JWT_SECRET = "test-jwt-secret";
 process.env.SUPABASE_URL = "https://example.supabase.co";

@@ -16,7 +16,7 @@ export default function BookingSuccess() {
         <span className="panel-label">Appointment received</span>
         <h1>Your booking is in</h1>
         <p>
-          Thanks for booking with Luna Nails Studio. We received your appointment
+          Thanks for booking with Honey Nails. We received your appointment
           {serviceName ? ` for ${serviceName}` : ""}. If anything needs to change, the salon will
           contact you using the details you provided.
         </p>

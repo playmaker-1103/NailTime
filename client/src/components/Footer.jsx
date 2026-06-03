@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="content-shell footer-grid">
         <div>
           <Link to="/" className="brand footer-brand">
-            Luna Nails Studio
+            Honey Nails
           </Link>
           <p>
             Calm nail care, clean appointment timing, and a simple request flow for polished hands
@@ -24,9 +24,9 @@ export default function Footer() {
             <Phone size={17} aria-hidden="true" />
             +353 87 123 4567
           </a>
-          <a href="mailto:hello@lunanails.ie">
+          <a href="mailto:hello@honeynails.ie">
             <Mail size={17} aria-hidden="true" />
-            hello@lunanails.ie
+            hello@honeynails.ie
           </a>
         </address>
 
