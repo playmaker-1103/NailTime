@@ -253,6 +253,21 @@ export default function AdminDashboard() {
       {message && <p className="success-message">{message}</p>}
       {error && <p className="error-message">{error}</p>}
 
+      <div className="dashboard-summary" aria-label="Dashboard summary">
+        <span>
+          <strong>{pendingNotices.length}</strong>
+          Pending
+        </span>
+        <span>
+          <strong>{bookings.length}</strong>
+          Showing
+        </span>
+        <span>
+          <strong>{services.length}</strong>
+          Services
+        </span>
+      </div>
+
       <section className="admin-notice-panel" aria-live="polite">
         <div className="admin-notice-header">
           <div>

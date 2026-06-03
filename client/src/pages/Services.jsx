@@ -54,11 +54,17 @@ export default function Services() {
       {error && <p className="error-message">{error}</p>}
 
       {!loading && !error && (
-        <div className="service-grid">
-          {services.map((service) => (
-            <ServiceCard key={service._id} service={service} />
-          ))}
-        </div>
+        <>
+          <div className="services-toolbar">
+            <strong>{services.length} services available</strong>
+            <span>Choose one to prefill the booking form.</span>
+          </div>
+          <div className="service-grid">
+            {services.map((service) => (
+              <ServiceCard key={service._id} service={service} />
+            ))}
+          </div>
+        </>
       )}
     </section>
   );

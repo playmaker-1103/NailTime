@@ -173,53 +173,63 @@ export default function Booking() {
   }
 
   return (
-    <section className="content-shell section booking-layout booking-page">
-      <div className="booking-intro">
-        <div className="booking-kicker">
-          <span aria-hidden="true">
-            <Sparkles size={16} />
-          </span>
-          Luna Nails Studio
-        </div>
-        <h1>Request your nail appointment</h1>
-        <p className="page-copy">
-          Choose a service, pick an open slot, and send your details. No account needed.
-        </p>
-
-        <div className="notice-panel">
-          <Info size={20} aria-hidden="true" />
-          <div>
-            <strong>Customer notice</strong>
-            <p>
-              Appointment times are listed every 5 minutes. Booked times are hidden automatically,
-              and the system will not allow two appointments at the same time.
-            </p>
+    <section className="booking-page">
+      <div className="content-shell booking-stage">
+        <div>
+          <div className="booking-kicker">
+            <span aria-hidden="true">
+              <Sparkles size={16} />
+            </span>
+            Luna Nails Studio
           </div>
+          <h1>Request your nail appointment</h1>
+          <p className="page-copy">
+            Choose a service, pick an open slot, and send your details. No account needed.
+          </p>
         </div>
-
-        {selectedService && (
-          <div className="selected-service-panel">
-            <div>
-              <span className="panel-label">Selected service</span>
-              <h2>{selectedService.name}</h2>
-              <p>{selectedService.description}</p>
-            </div>
-            <div className="selected-service-meta">
-              <span>
-                <Clock size={16} aria-hidden="true" />
-                {selectedService.durationMinutes} min
-              </span>
-              <strong>{formatCurrency(selectedService.price)}</strong>
-            </div>
-          </div>
-        )}
-
-        <div className="booking-photo" aria-hidden="true">
-          <img src="/images/salon-hero.png" alt="" />
+        <div className="booking-facts" aria-label="Booking notes">
+          <span>Public booking</span>
+          <span>5-minute slots</span>
+          <span>No double booking</span>
         </div>
       </div>
 
-      <form className="form-panel" onSubmit={handleSubmit} noValidate>
+      <div className="content-shell booking-workspace">
+        <div className="booking-intro">
+          <div className="booking-photo" aria-hidden="true">
+            <img src="/images/salon-hero.png" alt="" />
+          </div>
+
+          {selectedService && (
+            <div className="selected-service-panel">
+              <div>
+                <span className="panel-label">Selected service</span>
+                <h2>{selectedService.name}</h2>
+                <p>{selectedService.description}</p>
+              </div>
+              <div className="selected-service-meta">
+                <span>
+                  <Clock size={16} aria-hidden="true" />
+                  {selectedService.durationMinutes} min
+                </span>
+                <strong>{formatCurrency(selectedService.price)}</strong>
+              </div>
+            </div>
+          )}
+
+          <div className="notice-panel">
+            <Info size={20} aria-hidden="true" />
+            <div>
+              <strong>Customer notice</strong>
+              <p>
+                Appointment times are listed every 5 minutes. Booked times are hidden automatically,
+                and the system will not allow two appointments at the same time.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form className="form-panel" onSubmit={handleSubmit} noValidate>
         <div className="form-panel-header">
           <span className="panel-label">Booking request</span>
           <h2>Your details</h2>
@@ -355,7 +365,8 @@ export default function Booking() {
             </button>
           </>
         )}
-      </form>
+        </form>
+      </div>
     </section>
   );
 }
