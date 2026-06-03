@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nails Booking App"
+  short_description: "Project workflow for the Luna Nails booking app."
+  default_prompt: "Use the nails-booking skill when working on this project."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nails Booking Design"
+  short_description: "Design system and UX guidance for the Luna Nails booking app."
+  default_prompt: "Use the nails-booking-design skill when making UI, UX, or product-flow changes."

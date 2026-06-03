@@ -130,6 +130,13 @@ export default function Booking() {
     () => services.find((service) => service._id === form.service),
     [form.service, services]
   );
+  const timeHelper = useMemo(() => {
+    if (!form.appointmentDate) return "Choose a date to see open appointment times.";
+    if (loadingTimes) return "Checking the salon diary for open 5-minute slots.";
+    if (availability.availableTimes.length === 0) return "No open times are available for this date.";
+
+    return `${availability.availableTimes.length} open times available for this date.`;
+  }, [availability.availableTimes.length, form.appointmentDate, loadingTimes]);
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -232,6 +239,7 @@ export default function Booking() {
                   </option>
                 ))}
               </select>
+              <span className="field-helper">Only active services are shown.</span>
               {errors.service && <span className="field-error">{errors.service}</span>}
             </label>
 
@@ -245,6 +253,7 @@ export default function Booking() {
                   value={form.appointmentDate}
                   onChange={handleChange}
                 />
+                <span className="field-helper">Bookings can only be requested for today or later.</span>
                 {errors.appointmentDate && (
                   <span className="field-error">{errors.appointmentDate}</span>
                 )}
@@ -277,6 +286,7 @@ export default function Booking() {
                     </option>
                   ))}
                 </select>
+                <span className="field-helper">{timeHelper}</span>
                 {errors.appointmentTime && (
                   <span className="field-error">{errors.appointmentTime}</span>
                 )}
@@ -292,6 +302,7 @@ export default function Booking() {
                 onChange={handleChange}
                 placeholder="Maya Johnson"
               />
+              <span className="field-helper">Use the name the salon should ask for.</span>
               {errors.customerName && <span className="field-error">{errors.customerName}</span>}
             </label>
 
@@ -319,6 +330,7 @@ export default function Booking() {
                   onChange={handleChange}
                   placeholder="087 123 4567"
                 />
+                <span className="field-helper">Irish local numbers are fine.</span>
                 {errors.customerPhone && (
                   <span className="field-error">{errors.customerPhone}</span>
                 )}
@@ -334,6 +346,7 @@ export default function Booking() {
                 onChange={handleChange}
                 placeholder="Any nail art ideas, removal needs, or timing notes?"
               />
+              <span className="field-helper">Optional. Add removal, nail art, or timing notes.</span>
             </label>
 
             <button type="submit" className="button button-primary full-width" disabled={submitting}>

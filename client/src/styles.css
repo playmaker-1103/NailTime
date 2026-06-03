@@ -1,20 +1,78 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   --bg: #fff9f6;
   --surface: #ffffff;
   --surface-soft: #fbefeb;
+  --surface-tint: #fffaf8;
   --ink: #2c2427;
   --muted: #71656a;
   --line: #ead8d2;
   --rose: #b95770;
   --rose-dark: #85334a;
+  --primary-button-bg: #85334a;
+  --primary-button-ink: #ffffff;
   --sage: #657967;
   --sage-soft: #eef5ef;
+  --sage-line: #d9dfcf;
+  --sage-ink: #26382c;
   --gold: #a9803d;
   --danger: #ad3c49;
+  --danger-soft: #fff0f0;
+  --danger-line: #f0c6ca;
+  --whatsapp: #1f8f5f;
+  --whatsapp-shadow: rgba(31, 143, 95, 0.2);
+  --pending-bg: #fff4d9;
+  --pending-ink: #71500d;
+  --completed-bg: #eef1f6;
+  --completed-ink: #40506a;
+  --field-bg: #ffffff;
+  --field-border: #ddcbc5;
+  --field-placeholder: #8a7b80;
+  --field-disabled-bg: #f7efec;
+  --field-disabled-ink: #776a6e;
+  --header-bg: rgba(255, 250, 248, 0.92);
+  --body-overlay: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 249, 246, 0.92));
   --shadow: 0 18px 44px rgba(91, 61, 69, 0.11);
   font-family:
     ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181315;
+    --surface: #221b1e;
+    --surface-soft: #322126;
+    --surface-tint: #261d20;
+    --ink: #f6ece8;
+    --muted: #c7b6b0;
+    --line: #4a343b;
+    --rose: #d77d94;
+    --rose-dark: #f0a3b4;
+    --primary-button-bg: #f0a3b4;
+    --primary-button-ink: #2c2427;
+    --sage: #a9bea9;
+    --sage-soft: #223027;
+    --sage-line: #435845;
+    --sage-ink: #dcecdf;
+    --gold: #d3aa64;
+    --danger: #ff9ba5;
+    --danger-soft: #3a2025;
+    --danger-line: #6f343d;
+    --whatsapp: #4fb783;
+    --whatsapp-shadow: rgba(79, 183, 131, 0.16);
+    --pending-bg: #3a2d17;
+    --pending-ink: #f0ca72;
+    --completed-bg: #242d3d;
+    --completed-ink: #c4d1ec;
+    --field-bg: #1c1719;
+    --field-border: #5a4148;
+    --field-placeholder: #b9a6a1;
+    --field-disabled-bg: #281f22;
+    --field-disabled-ink: #a89792;
+    --header-bg: rgba(24, 19, 21, 0.9);
+    --body-overlay: linear-gradient(180deg, rgba(38, 29, 32, 0.74), rgba(24, 19, 21, 0.96));
+    --shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  }
 }
 
 * {
@@ -23,9 +81,7 @@
 
 body {
   margin: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 249, 246, 0.92)),
-    var(--bg);
+  background: var(--body-overlay), var(--bg);
   color: var(--ink);
 }
 
@@ -54,7 +110,7 @@ main {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(255, 250, 248, 0.92);
+  background: var(--header-bg);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
@@ -181,22 +237,22 @@ main {
 }
 
 .button-primary {
-  background: var(--rose-dark);
-  color: #fff;
+  background: var(--primary-button-bg);
+  color: var(--primary-button-ink);
   box-shadow: 0 12px 24px rgba(143, 56, 77, 0.25);
 }
 
 .button-secondary {
   background: var(--sage-soft);
-  color: #26382c;
-  border-color: #cbdccf;
+  color: var(--sage-ink);
+  border-color: var(--sage-line);
 }
 
 .button-whatsapp {
-  background: #1f8f5f;
+  background: var(--whatsapp);
   color: #fff;
-  border-color: #1f8f5f;
-  box-shadow: 0 10px 20px rgba(31, 143, 95, 0.2);
+  border-color: var(--whatsapp);
+  box-shadow: 0 10px 20px var(--whatsapp-shadow);
 }
 
 .button-ghost {
@@ -228,7 +284,7 @@ main {
   justify-content: center;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   color: var(--rose-dark);
   cursor: pointer;
 }
@@ -238,7 +294,7 @@ main {
 }
 
 .icon-button.whatsapp {
-  color: #1f8f5f;
+  color: var(--whatsapp);
 }
 
 .section {
@@ -340,7 +396,7 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(238, 245, 239, 0.86), rgba(255, 255, 255, 0.95)),
+    linear-gradient(135deg, color-mix(in srgb, var(--sage-soft) 86%, transparent), color-mix(in srgb, var(--surface) 95%, transparent)),
     var(--surface);
   box-shadow: var(--shadow);
 }
@@ -443,7 +499,7 @@ h3 {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   color: var(--sage);
   font-weight: 800;
 }
@@ -472,7 +528,7 @@ h3 {
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.72);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
   color: var(--rose-dark);
   font-weight: 850;
 }
@@ -505,10 +561,10 @@ h3 {
   gap: 12px;
   padding: 16px;
   margin-top: 24px;
-  border: 1px solid #d9dfcf;
+  border: 1px solid var(--sage-line);
   border-radius: 8px;
   background: var(--sage-soft);
-  color: #26382c;
+  color: var(--sage-ink);
 }
 
 .notice-panel svg {
@@ -606,9 +662,9 @@ input,
 select,
 textarea {
   width: 100%;
-  border: 1px solid #ddcbc5;
+  border: 1px solid var(--field-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field-bg);
   color: var(--ink);
   padding: 12px 13px;
   outline: none;
@@ -616,7 +672,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #8a7b80;
+  color: var(--field-placeholder);
   opacity: 1;
 }
 
@@ -639,8 +695,15 @@ textarea {
 select:disabled,
 input:disabled,
 textarea:disabled {
-  background: #f7efec;
-  color: #776a6e;
+  background: var(--field-disabled-bg);
+  color: var(--field-disabled-ink);
+}
+
+.field-helper {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.45;
 }
 
 .field-error,
@@ -661,16 +724,72 @@ textarea:disabled {
   font-weight: 700;
 }
 
+.loading-state {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--sage-line);
+  border-radius: 8px;
+  background: var(--sage-soft);
+  color: var(--sage-ink);
+  font-weight: 750;
+}
+
+.loading-bars {
+  display: grid;
+  gap: 8px;
+}
+
+.loading-bars i {
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sage-ink) 13%, transparent);
+}
+
+.loading-bars i:nth-child(2) {
+  width: 78%;
+}
+
+.loading-bars i:nth-child(3) {
+  width: 54%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .loading-bars i {
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--sage-ink) 9%, transparent),
+        color-mix(in srgb, var(--surface) 66%, transparent),
+        color-mix(in srgb, var(--sage-ink) 9%, transparent)
+      );
+    background-size: 220% 100%;
+    animation: skeleton-sheen 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes skeleton-sheen {
+  from {
+    background-position: 120% 0;
+  }
+
+  to {
+    background-position: -120% 0;
+  }
+}
+
 .error-message {
-  background: #fff0f0;
-  border: 1px solid #f0c6ca;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger-line);
 }
 
 .success-message,
 .status-message {
   background: var(--sage-soft);
-  border: 1px solid #cbdccf;
-  color: #26382c;
+  border: 1px solid var(--sage-line);
+  color: var(--sage-ink);
 }
 
 .success-panel {
@@ -705,7 +824,7 @@ textarea:disabled {
   padding: 0 10px;
   border-radius: 999px;
   background: var(--sage-soft);
-  color: #2c4b35;
+  color: var(--sage-ink);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -721,23 +840,23 @@ textarea:disabled {
 }
 
 .status-pill.pending {
-  background: #fff4d9;
-  color: #71500d;
+  background: var(--pending-bg);
+  color: var(--pending-ink);
 }
 
 .status-pill.confirmed {
   background: var(--sage-soft);
-  color: #2c4b35;
+  color: var(--sage-ink);
 }
 
 .status-pill.cancelled {
-  background: #fff0f0;
+  background: var(--danger-soft);
   color: var(--danger);
 }
 
 .status-pill.completed {
-  background: #eef1f6;
-  color: #40506a;
+  background: var(--completed-bg);
+  color: var(--completed-ink);
 }
 
 .dashboard {
@@ -757,9 +876,9 @@ textarea:disabled {
 
 .admin-notice-panel {
   padding: 22px;
-  border: 1px solid #d9dfcf;
+  border: 1px solid var(--sage-line);
   border-radius: 8px;
-  background: #fbfdf9;
+  background: var(--sage-soft);
   box-shadow: var(--shadow);
 }
 
@@ -779,7 +898,7 @@ textarea:disabled {
   padding: 0 12px;
   border-radius: 999px;
   background: var(--sage-soft);
-  color: #26382c;
+  color: var(--sage-ink);
   font-weight: 800;
 }
 
@@ -794,9 +913,9 @@ textarea:disabled {
   justify-content: space-between;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #d9dfcf;
+  border: 1px solid var(--sage-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .notice-item p {
@@ -816,7 +935,7 @@ textarea:disabled {
   padding: 3px 8px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fffaf8;
+  background: var(--surface-tint);
 }
 
 .notice-item span {
@@ -925,7 +1044,7 @@ th {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .service-admin-item p {
