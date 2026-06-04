@@ -1,6 +1,6 @@
 # Honey Nails Booking App
 
-A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment times every 5 minutes and prevents two active appointments from using the same date and time.
+A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment start times every 5 minutes and checks each service duration against the salon's 4-person working capacity.
 
 ## Features
 
@@ -9,8 +9,8 @@ A complete junior-friendly full-stack portfolio project for booking nail salon a
 - Booking form with frontend and backend validation
 - Customer notice explaining slot behavior
 - Appointment time dropdown with 5-minute slots
-- Availability endpoint that hides booked times
-- Duplicate booking protection for the same date and time
+- Availability endpoint that accounts for service duration and 4 nail techs
+- Capacity protection so a fifth overlapping appointment cannot be booked
 - Booking confirmation page
 - Appointment notice panel with WhatsApp follow-up links
 - JWT admin login for protected appointment and service management
@@ -116,6 +116,7 @@ ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=change-me-admin-password
 JWT_SECRET=change-me-long-random-secret
 JWT_EXPIRES_IN=1d
+SALON_STAFF_CAPACITY=4
 ```
 
 Frontend `client/.env`:
@@ -140,7 +141,7 @@ Services:
 Bookings:
 
 - `GET /api/bookings` admin JWT required
-- `GET /api/bookings/availability?date=YYYY-MM-DD`
+- `GET /api/bookings/availability?date=YYYY-MM-DD&service=SERVICE_ID`
 - `GET /api/bookings/:id` admin JWT required
 - `POST /api/bookings`
 - `PUT /api/bookings/:id/status` admin JWT required
@@ -162,7 +163,7 @@ cd server
 npm test
 ```
 
-The tests cover admin login, protected admin routes, service creation, booking creation, booking validation, 5-minute availability, duplicate booking prevention, filtering, and status updates.
+The tests cover admin login, protected admin routes, service creation, booking creation, booking validation, 5-minute availability, 4-person capacity protection, filtering, and status updates.
 
 ## Screenshots
 
@@ -176,7 +177,7 @@ Add screenshots here after running the app locally:
 
 - Email confirmation
 - Payment integration
-- Staff calendar and service-duration-aware availability
+- Staff calendar with individual nail tech assignment
 - Better admin security
 - Deployment instructions
 - Admin search and pagination for large booking lists

@@ -136,7 +136,8 @@ Components:
 - Admin routes require JWT auth.
 - Booked times are hidden.
 - Appointment times are listed in 5-minute increments.
-- Active bookings cannot share the same date and time.
+- Active bookings can overlap up to the salon's configured nail-tech capacity.
+- Availability must account for each selected service duration.
 - Cancelled bookings free their time slot.
 - Admin WhatsApp links should normalize local Irish phone numbers with country code `353`.
 

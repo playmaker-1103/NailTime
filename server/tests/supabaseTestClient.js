@@ -81,16 +81,6 @@ function normalizeBookingPayload(payload) {
   };
 }
 
-function hasActiveSlotConflict(candidate, ignoredId = null) {
-  return db.bookings.some(
-    (booking) =>
-      booking.id !== ignoredId &&
-      booking.appointment_date === candidate.appointment_date &&
-      normalizeTime(booking.appointment_time) === normalizeTime(candidate.appointment_time) &&
-      ["pending", "confirmed", "completed"].includes(booking.status)
-  );
-}
-
 class QueryBuilder {
   constructor(table) {
     this.table = table;
@@ -203,14 +193,6 @@ class QueryBuilder {
       this.table === "services" ? normalizeServicePayload(payload) : normalizeBookingPayload(payload)
     );
 
-    if (this.table === "bookings") {
-      const conflict = rows.find((row) => hasActiveSlotConflict(row));
-
-      if (conflict) {
-        return Promise.resolve({ data: null, error: { code: "23505" } });
-      }
-    }
-
     db[this.table].push(...rows);
     const data = rows.map((row) => attachRelations(this.table, { ...row }));
 
@@ -226,19 +208,9 @@ class QueryBuilder {
     const updatedRows = rows.map((row) => {
       const updated = { ...row, ...this.payload, updated_at: now() };
 
-      if (this.table === "bookings" && hasActiveSlotConflict(updated, row.id)) {
-        return { error: { code: "23505" } };
-      }
-
       Object.assign(row, updated);
       return attachRelations(this.table, { ...row });
     });
-
-    const conflict = updatedRows.find((row) => row.error);
-
-    if (conflict) {
-      return Promise.resolve({ data: null, error: conflict.error });
-    }
 
     if (options.single || options.maybeSingle) {
       return Promise.resolve({ data: updatedRows[0] || null, error: null });

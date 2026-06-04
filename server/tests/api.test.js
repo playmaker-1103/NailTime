@@ -151,47 +151,64 @@ test("booking validation rejects missing data, past dates, and non-5-minute time
   expect(badTimeResponse.body.message).toContain("5-minute increments");
 });
 
-test("availability lists 5-minute slots and hides booked times", async () => {
+test("availability accounts for service duration and 4-person salon capacity", async () => {
   const service = createSampleService();
   const date = futureDate(4);
 
-  createSampleBooking(service, {
-    appointment_date: date,
-    appointment_time: "14:30"
-  });
+  for (let index = 0; index < 4; index += 1) {
+    createSampleBooking(service, {
+      appointment_date: date,
+      appointment_time: "14:30",
+      customer_email: `maya-${index}@example.com`
+    });
+  }
 
-  const response = await request(app).get(`/api/bookings/availability?date=${date}`);
+  const response = await request(app).get(
+    `/api/bookings/availability?date=${date}&service=${service.id}`
+  );
 
   expect(response.status).toBe(200);
+  expect(response.body.salonCapacity).toBe(4);
+  expect(response.body.serviceDurationMinutes).toBe(50);
   expect(response.body.slotIntervalMinutes).toBe(5);
-  expect(response.body.availableTimes).toContain("14:25");
-  expect(response.body.availableTimes).toContain("14:35");
+  expect(response.body.availableTimes).toContain("13:35");
+  expect(response.body.availableTimes).toContain("15:20");
+  expect(response.body.availableTimes).not.toContain("13:45");
   expect(response.body.availableTimes).not.toContain("14:30");
-  expect(response.body.bookedTimes).toContain("14:30");
+  expect(response.body.availableTimes).not.toContain("15:15");
+  expect(response.body.unavailableTimes).toContain("14:30");
 });
 
-test("two active bookings cannot use the same date and time", async () => {
+test("up to four active bookings can overlap, then capacity rejects the next request", async () => {
   const service = createSampleService();
   const date = futureDate(5);
 
-  const firstResponse = await request(app)
-    .post("/api/bookings")
-    .send(bookingPayload(service, { appointmentDate: date, appointmentTime: "10:00" }));
+  for (let index = 0; index < 4; index += 1) {
+    const response = await request(app)
+      .post("/api/bookings")
+      .send(
+        bookingPayload(service, {
+          customerEmail: `customer-${index}@example.com`,
+          appointmentDate: date,
+          appointmentTime: "10:00"
+        })
+      );
 
-  expect(firstResponse.status).toBe(201);
+    expect(response.status).toBe(201);
+  }
 
-  const secondResponse = await request(app)
+  const fifthResponse = await request(app)
     .post("/api/bookings")
     .send(
       bookingPayload(service, {
-        customerEmail: "second@example.com",
+        customerEmail: "fifth@example.com",
         appointmentDate: date,
         appointmentTime: "10:00"
       })
     );
 
-  expect(secondResponse.status).toBe(409);
-  expect(secondResponse.body.message).toContain("already booked");
+  expect(fifthResponse.status).toBe(409);
+  expect(fifthResponse.body.message).toContain("fully booked");
 });
 
 test("admin can filter bookings and update booking status with a JWT", async () => {

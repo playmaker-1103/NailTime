@@ -26,7 +26,7 @@ create table if not exists bookings (
   updated_at timestamptz not null default now()
 );
 
-create unique index if not exists bookings_active_slot_unique
+create index if not exists bookings_active_slot_lookup
 on bookings (appointment_date, appointment_time)
 where status in ('pending', 'confirmed', 'completed');
 

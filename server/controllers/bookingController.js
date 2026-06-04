@@ -2,9 +2,11 @@ const supabase = require("../config/supabase");
 const { mapBooking, mapBookingPayload, normalizeTime } = require("../utils/dbMappers");
 
 const bookingStatuses = ["pending", "confirmed", "cancelled", "completed"];
+const activeBookingStatuses = ["pending", "confirmed", "completed"];
 const SLOT_INTERVAL_MINUTES = 5;
 const OPENING_TIME = "09:00";
 const CLOSING_TIME = "18:00";
+const SALON_STAFF_CAPACITY = Number(process.env.SALON_STAFF_CAPACITY || 4);
 
 function isValidUuid(id) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -51,7 +53,7 @@ function timeToMinutes(time) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function isBookableTimeSlot(time) {
+function isBookableTimeSlot(time, durationMinutes = SLOT_INTERVAL_MINUTES) {
   const minutes = timeToMinutes(time);
   const openingMinutes = timeToMinutes(OPENING_TIME);
   const closingMinutes = timeToMinutes(CLOSING_TIME);
@@ -59,17 +61,18 @@ function isBookableTimeSlot(time) {
   return (
     minutes !== null &&
     minutes >= openingMinutes &&
-    minutes <= closingMinutes &&
+    minutes + durationMinutes <= closingMinutes &&
     minutes % SLOT_INTERVAL_MINUTES === 0
   );
 }
 
-function generateTimeSlots() {
+function generateTimeSlots(durationMinutes = SLOT_INTERVAL_MINUTES) {
   const slots = [];
   const openingMinutes = timeToMinutes(OPENING_TIME);
   const closingMinutes = timeToMinutes(CLOSING_TIME);
+  const lastStartMinutes = closingMinutes - durationMinutes;
 
-  for (let minutes = openingMinutes; minutes <= closingMinutes; minutes += SLOT_INTERVAL_MINUTES) {
+  for (let minutes = openingMinutes; minutes <= lastStartMinutes; minutes += SLOT_INTERVAL_MINUTES) {
     const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
     const mins = String(minutes % 60).padStart(2, "0");
     slots.push(`${hours}:${mins}`);
@@ -78,7 +81,7 @@ function generateTimeSlots() {
   return slots;
 }
 
-function validateBookingInput(body) {
+function validateBookingInput(body, serviceDurationMinutes = SLOT_INTERVAL_MINUTES) {
   const errors = [];
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -95,35 +98,100 @@ function validateBookingInput(body) {
   } else if (body.appointmentDate && isPastDate(body.appointmentDate)) {
     errors.push("Booking date cannot be in the past");
   }
-  if (body.appointmentTime && !isBookableTimeSlot(body.appointmentTime)) {
+  if (body.appointmentTime && !isBookableTimeSlot(body.appointmentTime, serviceDurationMinutes)) {
     errors.push(
-      `Appointment time must be between ${OPENING_TIME} and ${CLOSING_TIME} in ${SLOT_INTERVAL_MINUTES}-minute increments`
+      `Appointment time must fit between ${OPENING_TIME} and ${CLOSING_TIME} in ${SLOT_INTERVAL_MINUTES}-minute increments`
     );
   }
 
   return errors;
 }
 
-async function getBookedTimesForDate(date) {
+function getBookingDurationMinutes(booking) {
+  return Number(booking.service?.duration_minutes || SLOT_INTERVAL_MINUTES);
+}
+
+function getBookingRange(booking) {
+  const startMinutes = timeToMinutes(normalizeTime(booking.appointment_time));
+
+  return {
+    endMinutes: startMinutes + getBookingDurationMinutes(booking),
+    startMinutes
+  };
+}
+
+function hasSegmentCapacity(segmentStartMinutes, segmentEndMinutes, activeBookings) {
+  const overlappingBookings = activeBookings.filter((booking) => {
+    const bookingRange = getBookingRange(booking);
+
+    return bookingRange.startMinutes < segmentEndMinutes && bookingRange.endMinutes > segmentStartMinutes;
+  });
+
+  return overlappingBookings.length < SALON_STAFF_CAPACITY;
+}
+
+function hasCapacityForService(startTime, serviceDurationMinutes, activeBookings) {
+  const startMinutes = timeToMinutes(startTime);
+  const endMinutes = startMinutes + serviceDurationMinutes;
+
+  for (
+    let segmentStart = startMinutes;
+    segmentStart < endMinutes;
+    segmentStart += SLOT_INTERVAL_MINUTES
+  ) {
+    const segmentEnd = Math.min(segmentStart + SLOT_INTERVAL_MINUTES, endMinutes);
+
+    if (!hasSegmentCapacity(segmentStart, segmentEnd, activeBookings)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getUnavailableTimesForService(allTimes, serviceDurationMinutes, activeBookings) {
+  return allTimes.filter((time) => !hasCapacityForService(time, serviceDurationMinutes, activeBookings));
+}
+
+async function getActiveBookingsForDate(date) {
   const { data, error } = await supabase
     .from("bookings")
-    .select("appointment_time")
+    .select("appointment_time, status, service:services(duration_minutes)")
     .eq("appointment_date", date)
-    .neq("status", "cancelled");
+    .in("status", activeBookingStatuses);
 
   if (error) {
     throw error;
   }
 
-  return data.map((booking) => normalizeTime(booking.appointment_time)).sort();
+  return data;
+}
+
+async function getActiveService(serviceId) {
+  if (!isValidUuid(serviceId)) {
+    return { service: null, error: null };
+  }
+
+  const { data, error } = await supabase
+    .from("services")
+    .select("id, duration_minutes")
+    .eq("id", serviceId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  return { service: data, error };
 }
 
 async function getAvailability(req, res) {
   try {
-    const { date } = req.query;
+    const { date, service: serviceId } = req.query;
 
     if (!date) {
       return res.status(400).json({ message: "Date is required" });
+    }
+
+    if (!serviceId) {
+      return res.status(400).json({ message: "Service is required" });
     }
 
     if (!isValidDateString(date)) {
@@ -134,20 +202,39 @@ async function getAvailability(req, res) {
       return res.status(400).json({ message: "Booking date cannot be in the past" });
     }
 
-    const allTimes = generateTimeSlots();
-    const bookedTimes = await getBookedTimesForDate(date);
-    const bookedSet = new Set(bookedTimes);
-    const availableTimes = allTimes.filter((time) => !bookedSet.has(time));
+    const { service, error: serviceError } = await getActiveService(serviceId);
+
+    if (serviceError) {
+      return res.status(500).json({ message: "Could not fetch availability" });
+    }
+
+    if (!service) {
+      return res.status(404).json({ message: "Active service not found" });
+    }
+
+    const serviceDurationMinutes = Number(service.duration_minutes);
+    const allTimes = generateTimeSlots(serviceDurationMinutes);
+    const activeBookings = await getActiveBookingsForDate(date);
+    const unavailableTimes = getUnavailableTimesForService(
+      allTimes,
+      serviceDurationMinutes,
+      activeBookings
+    );
+    const unavailableSet = new Set(unavailableTimes);
+    const availableTimes = allTimes.filter((time) => !unavailableSet.has(time));
 
     return res.json({
       date,
-      slotIntervalMinutes: SLOT_INTERVAL_MINUTES,
-      openingTime: OPENING_TIME,
-      closingTime: CLOSING_TIME,
-      bookedTimes,
+      bookedTimes: activeBookings.map((booking) => normalizeTime(booking.appointment_time)).sort(),
       availableTimes,
+      closingTime: CLOSING_TIME,
+      slotIntervalMinutes: SLOT_INTERVAL_MINUTES,
+      salonCapacity: SALON_STAFF_CAPACITY,
+      serviceDurationMinutes,
+      openingTime: OPENING_TIME,
+      unavailableTimes,
       notice:
-        "Available appointments are listed every 5 minutes. Times already booked are hidden."
+        "Available times account for the selected service duration and the 4-person salon capacity."
     });
   } catch (error) {
     return res.status(500).json({ message: "Could not fetch availability" });
@@ -214,22 +301,11 @@ async function getBookingById(req, res) {
 
 async function createBooking(req, res) {
   try {
-    const errors = validateBookingInput(req.body);
-
-    if (errors.length > 0) {
-      return res.status(400).json({ message: errors.join(". ") });
-    }
-
     if (!isValidUuid(req.body.service)) {
       return res.status(400).json({ message: "Invalid service id" });
     }
 
-    const { data: service, error: serviceError } = await supabase
-      .from("services")
-      .select("id")
-      .eq("id", req.body.service)
-      .eq("is_active", true)
-      .maybeSingle();
+    const { service, error: serviceError } = await getActiveService(req.body.service);
 
     if (serviceError) {
       return res.status(500).json({ message: "Could not create booking" });
@@ -239,22 +315,24 @@ async function createBooking(req, res) {
       return res.status(404).json({ message: "Active service not found" });
     }
 
-    const { data: existingBooking, error: existingError } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("appointment_date", req.body.appointmentDate)
-      .eq("appointment_time", req.body.appointmentTime)
-      .neq("status", "cancelled")
-      .limit(1)
-      .maybeSingle();
+    const serviceDurationMinutes = Number(service.duration_minutes);
+    const errors = validateBookingInput(req.body, serviceDurationMinutes);
 
-    if (existingError) {
-      return res.status(500).json({ message: "Could not create booking" });
+    if (errors.length > 0) {
+      return res.status(400).json({ message: errors.join(". ") });
     }
 
-    if (existingBooking) {
+    const activeBookings = await getActiveBookingsForDate(req.body.appointmentDate);
+    const hasCapacity = hasCapacityForService(
+      req.body.appointmentTime,
+      serviceDurationMinutes,
+      activeBookings
+    );
+
+    if (!hasCapacity) {
       return res.status(409).json({
-        message: "This appointment time is already booked. Please choose another time."
+        message:
+          "The salon is fully booked for this service at that time. Please choose another time."
       });
     }
 
@@ -267,7 +345,8 @@ async function createBooking(req, res) {
     if (bookingError) {
       if (bookingError.code === "23505") {
         return res.status(409).json({
-          message: "This appointment time is already booked. Please choose another time."
+          message:
+            "The salon is fully booked for this service at that time. Please choose another time."
         });
       }
 
@@ -278,7 +357,8 @@ async function createBooking(req, res) {
   } catch (error) {
     if (error.code === "23505") {
       return res.status(409).json({
-        message: "This appointment time is already booked. Please choose another time."
+        message:
+          "The salon is fully booked for this service at that time. Please choose another time."
       });
     }
 
@@ -352,6 +432,7 @@ module.exports = {
   getBookingById,
   getBookings,
   generateTimeSlots,
+  hasCapacityForService,
   isBookableTimeSlot,
   updateBookingStatus
 };

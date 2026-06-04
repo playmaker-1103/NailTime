@@ -28,6 +28,8 @@ const initialForm = {
 const emptyAvailability = {
   availableTimes: [],
   bookedTimes: [],
+  salonCapacity: 4,
+  serviceDurationMinutes: null,
   notice: ""
 };
 
@@ -96,7 +98,7 @@ export default function Booking() {
     let isMounted = true;
 
     async function loadAvailability() {
-      if (!form.appointmentDate) {
+      if (!form.appointmentDate || !form.service) {
         setAvailability(emptyAvailability);
         return;
       }
@@ -105,7 +107,7 @@ export default function Booking() {
       setApiError("");
 
       try {
-        const data = await api.getAvailability(form.appointmentDate);
+        const data = await api.getAvailability(form.appointmentDate, form.service);
 
         if (!isMounted) return;
 
@@ -134,7 +136,7 @@ export default function Booking() {
     return () => {
       isMounted = false;
     };
-  }, [form.appointmentDate]);
+  }, [form.appointmentDate, form.service]);
 
   const selectedService = useMemo(
     () => services.find((service) => service._id === form.service),
@@ -142,18 +144,25 @@ export default function Booking() {
   );
   const timeHelper = useMemo(() => {
     if (!form.appointmentDate) return "Choose a date to see open appointment times.";
+    if (!form.service) return "Choose a service to check the team diary.";
     if (loadingTimes) return "Checking the salon diary for open 5-minute slots.";
     if (availability.availableTimes.length === 0) return "No open times are available for this date.";
 
-    return `${availability.availableTimes.length} open times available for this date.`;
-  }, [availability.availableTimes.length, form.appointmentDate, loadingTimes]);
+    return `${availability.availableTimes.length} start times fit this service with ${availability.salonCapacity} nail techs working.`;
+  }, [
+    availability.availableTimes.length,
+    availability.salonCapacity,
+    form.appointmentDate,
+    form.service,
+    loadingTimes
+  ]);
 
   function handleChange(event) {
     const { name, value } = event.target;
     setForm((current) => ({
       ...current,
       [name]: value,
-      ...(name === "appointmentDate" ? { appointmentTime: "" } : {})
+      ...(name === "appointmentDate" || name === "service" ? { appointmentTime: "" } : {})
     }));
     setErrors((current) => ({ ...current, [name]: "" }));
   }
@@ -200,7 +209,7 @@ export default function Booking() {
         </div>
         <div className="booking-facts" aria-label="Booking notes">
           <span>Open daily 09:00-18:00</span>
-          <span>Instant slot check</span>
+          <span>4 nail techs available</span>
           <span>WhatsApp follow-up</span>
         </div>
       </div>
@@ -233,8 +242,8 @@ export default function Booking() {
             <div>
               <strong>Customer notice</strong>
               <p>
-                Appointment requests are held as pending until the salon confirms. If a slot is
-                already booked, it disappears from the list automatically.
+                Appointment requests are held as pending until the salon confirms. Times are checked
+                against each service length and the 4-person team capacity.
               </p>
             </div>
           </div>

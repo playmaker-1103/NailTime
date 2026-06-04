@@ -82,8 +82,9 @@ export const api = {
       body: JSON.stringify(booking)
     });
   },
-  getAvailability(date) {
-    return request(`/bookings/availability?date=${encodeURIComponent(date)}`);
+  getAvailability(date, serviceId) {
+    const query = new URLSearchParams({ date, service: serviceId });
+    return request(`/bookings/availability?${query.toString()}`);
   },
   getBookings(status = "") {
     const query = status ? `?status=${status}` : "";
