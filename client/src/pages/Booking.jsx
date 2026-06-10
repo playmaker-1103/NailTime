@@ -33,16 +33,18 @@ const emptyAvailability = {
   notice: ""
 };
 
+const SLOT_INTERVAL_MINUTES = 15;
+
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isFiveMinuteTime(time) {
+function isValidSlotInterval(time) {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
 
   if (!match) return false;
 
-  return Number(match[2]) % 5 === 0;
+  return Number(match[2]) % SLOT_INTERVAL_MINUTES === 0;
 }
 
 function validateBooking(form) {
@@ -52,8 +54,8 @@ function validateBooking(form) {
   if (!form.service) errors.service = "Please choose a service.";
   if (!form.appointmentDate) errors.appointmentDate = "Please choose a date.";
   if (!form.appointmentTime) errors.appointmentTime = "Please choose a time.";
-  if (form.appointmentTime && !isFiveMinuteTime(form.appointmentTime)) {
-    errors.appointmentTime = "Please choose a 5-minute time slot.";
+  if (form.appointmentTime && !isValidSlotInterval(form.appointmentTime)) {
+    errors.appointmentTime = "Please choose a 15-minute time slot.";
   }
   if (!form.customerName.trim()) errors.customerName = "Name is required.";
   if (!emailPattern.test(form.customerEmail)) errors.customerEmail = "Enter a valid email.";
@@ -145,7 +147,7 @@ export default function Booking() {
   const timeHelper = useMemo(() => {
     if (!form.appointmentDate) return "Choose a date to see open appointment times.";
     if (!form.service) return "Choose a service to check the team diary.";
-    if (loadingTimes) return "Checking the salon diary for open 5-minute slots.";
+    if (loadingTimes) return "Checking the salon diary for open 15-minute starts.";
     if (availability.availableTimes.length === 0) return "No open times are available for this date.";
 
     return `${availability.availableTimes.length} start times fit this service with ${availability.salonCapacity} nail techs working.`;
@@ -203,8 +205,8 @@ export default function Booking() {
           </div>
           <h1>Request your nail appointment</h1>
           <p className="page-copy">
-            Choose a service, pick an open slot, and send your details. We will confirm your
-            request by message so your visit is calm from the first tap.
+            Choose a service, pick an open slot, and send your details. Your appointment is booked
+            right away when the team has capacity.
           </p>
         </div>
         <div className="booking-facts" aria-label="Booking notes">
@@ -242,8 +244,8 @@ export default function Booking() {
             <div>
               <strong>Customer notice</strong>
               <p>
-                Appointment requests are held as pending until the salon confirms. Times are checked
-                against each service length and the 4-person team capacity.
+                Appointments are confirmed immediately when the selected service fits the diary.
+                Times are checked against each service length and the 4-person team capacity.
               </p>
             </div>
           </div>
@@ -417,8 +419,8 @@ export default function Booking() {
           </article>
           <article>
             <CheckCircle2 size={20} aria-hidden="true" />
-            <strong>Simple confirmation</strong>
-            <span>Every request lands in the admin dashboard ready for fast follow-up by WhatsApp.</span>
+            <strong>Instant confirmation</strong>
+            <span>Every booking lands confirmed in the admin dashboard, ready for fast follow-up by WhatsApp.</span>
           </article>
         </section>
 
@@ -437,7 +439,7 @@ export default function Booking() {
             <span className="panel-label">Customer care</span>
             <h2>Policies made plain</h2>
             <ul className="clean-list">
-              <li>Requests are pending until the studio confirms them.</li>
+              <li>Your appointment is confirmed as soon as the booking is submitted.</li>
               <li>Cancelled appointments release the time for another customer.</li>
               <li>Prices and durations are shown before you send your request.</li>
             </ul>

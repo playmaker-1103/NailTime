@@ -75,7 +75,7 @@ function normalizeBookingPayload(payload) {
     appointment_date: payload.appointment_date,
     appointment_time: normalizeTime(payload.appointment_time),
     notes: payload.notes || "",
-    status: payload.status || "pending",
+    status: payload.status || "confirmed",
     created_at: payload.created_at || now(),
     updated_at: payload.updated_at || now()
   };

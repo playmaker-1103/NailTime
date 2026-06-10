@@ -47,7 +47,7 @@ export default function Services() {
           <h2>Soft color, careful prep, clean timing</h2>
           <p>
             Each appointment request checks availability before it reaches the salon, so customers
-            only see open times and the owner can confirm quickly.
+            only see open times and the appointment is confirmed immediately.
           </p>
           <div className="feature-points">
             <span>
@@ -83,7 +83,7 @@ export default function Services() {
               <h2>Not sure what to book?</h2>
               <p>
                 Pick the closest service and add notes for removal, repairs, extensions, or nail
-                art. The salon can confirm timing before your appointment is accepted.
+                art. The system only shows start times that fit the service and team capacity.
               </p>
             </article>
             <article className="info-panel">
@@ -93,7 +93,7 @@ export default function Services() {
                 Good to know
               </h2>
               <ul className="clean-list">
-                <li>Appointment requests are pending until confirmed by the studio.</li>
+                <li>Appointments are confirmed as soon as the booking is submitted.</li>
                 <li>Booked times are hidden from the public booking form.</li>
                 <li>Irish phone numbers can be entered in local format.</li>
               </ul>

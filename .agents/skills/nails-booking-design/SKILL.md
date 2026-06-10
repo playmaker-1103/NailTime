@@ -21,7 +21,7 @@ Customer flow:
 1. Land on the booking page.
 2. Pick a service.
 3. Pick an appointment date.
-4. Select an available 5-minute time slot.
+4. Select an available 15-minute start time.
 5. Enter contact details and notes.
 6. Submit the booking request.
 7. See a confirmation page.
@@ -135,7 +135,8 @@ Components:
 - Customers do not need to sign in.
 - Admin routes require JWT auth.
 - Booked times are hidden.
-- Appointment times are listed in 5-minute increments.
+- Appointment start times are listed in 15-minute increments.
+- Customer bookings are confirmed immediately when capacity is available.
 - Active bookings can overlap up to the salon's configured nail-tech capacity.
 - Availability must account for each selected service duration.
 - Cancelled bookings free their time slot.

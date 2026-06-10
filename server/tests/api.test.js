@@ -4,6 +4,7 @@ process.env.ADMIN_PASSWORD = "secret-password";
 process.env.JWT_SECRET = "test-jwt-secret";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+process.env.APPOINTMENT_SLOT_INTERVAL_MINUTES = "15";
 
 jest.mock("../config/supabase", () => require("./supabaseTestClient"));
 
@@ -120,11 +121,11 @@ test("customer can create a booking for an active service", async () => {
   const response = await request(app).post("/api/bookings").send(bookingPayload(service));
 
   expect(response.status).toBe(201);
-  expect(response.body.booking.status).toBe("pending");
+  expect(response.body.booking.status).toBe("confirmed");
   expect(response.body.booking.service.name).toBe("Gel Manicure");
 });
 
-test("booking validation rejects missing data, past dates, and non-5-minute times", async () => {
+test("booking validation rejects missing data, past dates, and non-15-minute times", async () => {
   const service = createSampleService();
 
   const missingResponse = await request(app)
@@ -145,10 +146,10 @@ test("booking validation rejects missing data, past dates, and non-5-minute time
 
   const badTimeResponse = await request(app)
     .post("/api/bookings")
-    .send(bookingPayload(service, { appointmentTime: "14:32" }));
+    .send(bookingPayload(service, { appointmentTime: "14:35" }));
 
   expect(badTimeResponse.status).toBe(400);
-  expect(badTimeResponse.body.message).toContain("5-minute increments");
+  expect(badTimeResponse.body.message).toContain("15-minute increments");
 });
 
 test("availability accounts for service duration and 4-person salon capacity", async () => {
@@ -170,9 +171,9 @@ test("availability accounts for service duration and 4-person salon capacity", a
   expect(response.status).toBe(200);
   expect(response.body.salonCapacity).toBe(4);
   expect(response.body.serviceDurationMinutes).toBe(50);
-  expect(response.body.slotIntervalMinutes).toBe(5);
-  expect(response.body.availableTimes).toContain("13:35");
-  expect(response.body.availableTimes).toContain("15:20");
+  expect(response.body.slotIntervalMinutes).toBe(15);
+  expect(response.body.availableTimes).toContain("13:30");
+  expect(response.body.availableTimes).toContain("15:30");
   expect(response.body.availableTimes).not.toContain("13:45");
   expect(response.body.availableTimes).not.toContain("14:30");
   expect(response.body.availableTimes).not.toContain("15:15");

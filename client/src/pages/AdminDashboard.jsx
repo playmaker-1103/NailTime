@@ -164,7 +164,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const data = await api.getBookings("pending");
+      const data = await api.getBookings("confirmed");
       setPendingNotices(data.bookings);
     } catch (err) {
       if (!options.silent) {
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
       <div className="dashboard-summary" aria-label="Dashboard summary">
         <span>
           <strong>{pendingNotices.length}</strong>
-          Pending
+          Follow-up
         </span>
         <span>
           <strong>{dashboardStats.todayBookings.length}</strong>
@@ -348,11 +348,11 @@ export default function AdminDashboard() {
         <div className="admin-notice-header">
           <div>
             <h2>WhatsApp follow-up</h2>
-            <p className="quiet-message">Pending requests that need a customer message.</p>
+            <p className="quiet-message">Confirmed appointments ready for a customer message.</p>
           </div>
           <span className="notice-count">
             <Bell size={17} aria-hidden="true" />
-            {pendingNotices.length} pending
+            {pendingNotices.length} confirmed
           </span>
         </div>
 
@@ -390,7 +390,7 @@ export default function AdminDashboard() {
             })}
           </div>
         ) : (
-          <p className="quiet-message">No new appointment notices right now.</p>
+          <p className="quiet-message">No confirmed appointments need follow-up right now.</p>
         )}
       </section>
 

@@ -60,11 +60,14 @@ Availability is service-duration-aware and uses the configured salon capacity:
 
 ```text
 SALON_STAFF_CAPACITY=4
+APPOINTMENT_SLOT_INTERVAL_MINUTES=15
 ```
 
 Active bookings can overlap until that capacity is reached. Do not reintroduce a unique
 `(appointment_date, appointment_time)` constraint unless the product switches back to single-chair
 booking.
+
+New customer bookings are confirmed immediately by the API when capacity is available.
 
 Never put a Supabase PAT (`sbp_...`) in app env vars. The Express backend needs `SUPABASE_SERVICE_ROLE_KEY` or an appropriate server-side secret. If only a publishable key is available, treat it as a temporary demo setup and note the RLS risk.
 

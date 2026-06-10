@@ -16,9 +16,9 @@ export default function BookingSuccess() {
         <span className="panel-label">Appointment received</span>
         <h1>Your booking is in</h1>
         <p>
-          Thanks for booking with Honey Nails. We received your appointment
-          {serviceName ? ` for ${serviceName}` : ""}. If anything needs to change, the salon will
-          contact you using the details you provided.
+          Thanks for booking with Honey Nails. Your appointment
+          {serviceName ? ` for ${serviceName}` : ""} is confirmed. If anything needs to change, the
+          salon will contact you using the details you provided.
         </p>
         {booking && (
           <div className="confirmation-details">
@@ -30,7 +30,7 @@ export default function BookingSuccess() {
         <div className="next-steps" aria-label="What happens next">
           <span>
             <CheckCircle2 size={17} aria-hidden="true" />
-            Your request is now pending in the salon diary.
+            Your appointment is confirmed in the salon diary.
           </span>
           <span>
             <MessageCircle size={17} aria-hidden="true" />

@@ -3,7 +3,7 @@ const { mapBooking, mapBookingPayload, normalizeTime } = require("../utils/dbMap
 
 const bookingStatuses = ["pending", "confirmed", "cancelled", "completed"];
 const activeBookingStatuses = ["pending", "confirmed", "completed"];
-const SLOT_INTERVAL_MINUTES = 5;
+const SLOT_INTERVAL_MINUTES = Number(process.env.APPOINTMENT_SLOT_INTERVAL_MINUTES || 15);
 const OPENING_TIME = "09:00";
 const CLOSING_TIME = "18:00";
 const SALON_STAFF_CAPACITY = Number(process.env.SALON_STAFF_CAPACITY || 4);
@@ -338,7 +338,7 @@ async function createBooking(req, res) {
 
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
-      .insert(mapBookingPayload(req.body))
+      .insert({ ...mapBookingPayload(req.body), status: "confirmed" })
       .select("*, service:services(*)")
       .single();
 

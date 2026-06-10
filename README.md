@@ -1,6 +1,6 @@
 # Honey Nails Booking App
 
-A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment start times every 5 minutes and checks each service duration against the salon's 4-person working capacity.
+A complete junior-friendly full-stack portfolio project for booking nail salon appointments. Customers can open the app and book right away without signing in. The app lists available appointment start times every 15 minutes and checks each service duration against the salon's 4-person working capacity.
 
 ## Features
 
@@ -8,7 +8,7 @@ A complete junior-friendly full-stack portfolio project for booking nail salon a
 - Services page with prices, descriptions, and durations
 - Booking form with frontend and backend validation
 - Customer notice explaining slot behavior
-- Appointment time dropdown with 5-minute slots
+- Appointment time dropdown with 15-minute start times
 - Availability endpoint that accounts for service duration and 4 nail techs
 - Capacity protection so a fifth overlapping appointment cannot be booked
 - Booking confirmation page
@@ -117,6 +117,7 @@ ADMIN_PASSWORD=change-me-admin-password
 JWT_SECRET=change-me-long-random-secret
 JWT_EXPIRES_IN=1d
 SALON_STAFF_CAPACITY=4
+APPOINTMENT_SLOT_INTERVAL_MINUTES=15
 ```
 
 Frontend `client/.env`:
@@ -163,7 +164,7 @@ cd server
 npm test
 ```
 
-The tests cover admin login, protected admin routes, service creation, booking creation, booking validation, 5-minute availability, 4-person capacity protection, filtering, and status updates.
+The tests cover admin login, protected admin routes, service creation, booking creation, booking validation, 15-minute availability, 4-person capacity protection, filtering, and status updates.
 
 ## Screenshots
 

@@ -20,7 +20,7 @@ create table if not exists bookings (
   appointment_date date not null,
   appointment_time time not null,
   notes text not null default '',
-  status text not null default 'pending'
+  status text not null default 'confirmed'
     check (status in ('pending', 'confirmed', 'cancelled', 'completed')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -80,7 +80,7 @@ export default function Home() {
           </span>
           <span>
             <CheckCircle2 size={18} aria-hidden="true" />
-            5-minute time slots
+            15-minute start times
           </span>
           <span>
             <CheckCircle2 size={18} aria-hidden="true" />
