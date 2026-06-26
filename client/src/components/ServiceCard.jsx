@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, Euro, Sparkles } from "lucide-react";
+import { ArrowRight, Clock, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatCurrency } from "../utils/formatters.js";
 
@@ -20,10 +20,7 @@ export default function ServiceCard({ service, showBookButton = true }) {
           <Clock size={16} aria-hidden="true" />
           {service.durationMinutes} min
         </span>
-        <span>
-          <Euro size={16} aria-hidden="true" />
-          {formatCurrency(service.price)}
-        </span>
+        <span>{formatCurrency(service.price)}</span>
       </div>
 
       {showBookButton && (
