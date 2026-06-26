@@ -1,6 +1,8 @@
 import {
+  Ban,
   Bell,
   CalendarClock,
+  Clock3,
   Edit3,
   LogOut,
   MessageCircle,
@@ -9,6 +11,7 @@ import {
   Save,
   Search,
   Trash2,
+  Users,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -18,6 +21,7 @@ import { api } from "../services/api.js";
 import { formatCurrency, formatDate } from "../utils/formatters.js";
 
 const statusOptions = ["pending", "confirmed", "cancelled", "completed"];
+const sourceOptions = ["online", "phone", "walk_in", "admin_block"];
 const DEFAULT_COUNTRY_CODE = import.meta.env.VITE_DEFAULT_COUNTRY_CODE || "353";
 
 const emptyServiceForm = {
@@ -26,6 +30,19 @@ const emptyServiceForm = {
   durationMinutes: "",
   price: "",
   isActive: true
+};
+
+const emptyAdminBookingForm = {
+  source: "phone",
+  service: "",
+  customerName: "",
+  customerEmail: "",
+  customerPhone: "",
+  appointmentDate: todayString(),
+  appointmentTime: "09:00",
+  durationMinutes: 60,
+  capacitySlots: 4,
+  notes: ""
 };
 
 function normalizePhoneForWhatsApp(phone) {
@@ -71,36 +88,73 @@ function getStatusLabel(status) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+function getSourceLabel(source) {
+  const labels = {
+    online: "Online",
+    phone: "Phone",
+    walk_in: "Walk-in",
+    admin_block: "Blocked"
+  };
+
+  return labels[source] || source;
+}
+
 function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function generateAdminTimeOptions() {
+  const options = [];
+
+  for (let minutes = 9 * 60; minutes < 18 * 60; minutes += 15) {
+    const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+    const mins = String(minutes % 60).padStart(2, "0");
+    options.push(`${hours}:${mins}`);
+  }
+
+  return options;
+}
+
+const adminTimeOptions = generateAdminTimeOptions();
+
 export default function AdminDashboard() {
   const { admin, logout } = useAuth();
   const [bookingFilter, setBookingFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [bookingSearch, setBookingSearch] = useState("");
   const [bookings, setBookings] = useState([]);
   const [pendingNotices, setPendingNotices] = useState([]);
   const [services, setServices] = useState([]);
   const [serviceForm, setServiceForm] = useState(emptyServiceForm);
+  const [adminBookingForm, setAdminBookingForm] = useState(emptyAdminBookingForm);
+  const [scheduleDate, setScheduleDate] = useState(todayString());
+  const [daySchedule, setDaySchedule] = useState(null);
   const [editingServiceId, setEditingServiceId] = useState(null);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [loadingNotices, setLoadingNotices] = useState(true);
   const [loadingServices, setLoadingServices] = useState(true);
+  const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const dashboardStats = useMemo(() => {
     const today = todayString();
-    const todayBookings = bookings.filter((booking) => booking.appointmentDate === today);
+    const todayBookings = bookings.filter(
+      (booking) => booking.appointmentDate === today && booking.source !== "admin_block"
+    );
     const confirmedBookings = bookings.filter((booking) => booking.status === "confirmed");
+    const blockedBookings = bookings.filter((booking) => booking.source === "admin_block");
     const activeServices = services.filter((service) => service.isActive);
     const nextBooking =
-      bookings.find((booking) => ["pending", "confirmed"].includes(booking.status)) || null;
+      bookings.find(
+        (booking) =>
+          ["pending", "confirmed"].includes(booking.status) && booking.source !== "admin_block"
+      ) || null;
 
     return {
       todayBookings,
       confirmedBookings,
+      blockedBookings,
       activeServices,
       nextBooking
     };
@@ -119,6 +173,7 @@ export default function AdminDashboard() {
         booking.service?.name,
         booking.appointmentDate,
         booking.appointmentTime,
+        booking.source,
         booking.status,
         booking.notes
       ];
@@ -128,8 +183,12 @@ export default function AdminDashboard() {
   }, [bookingSearch, bookings]);
 
   useEffect(() => {
-    loadBookings(bookingFilter);
-  }, [bookingFilter]);
+    loadBookings();
+  }, [bookingFilter, sourceFilter]);
+
+  useEffect(() => {
+    loadDaySchedule(scheduleDate);
+  }, [scheduleDate]);
 
   useEffect(() => {
     loadServices();
@@ -144,12 +203,12 @@ export default function AdminDashboard() {
     };
   }, []);
 
-  async function loadBookings(status = "") {
+  async function loadBookings() {
     setLoadingBookings(true);
     setError("");
 
     try {
-      const data = await api.getBookings(status);
+      const data = await api.getBookings({ source: sourceFilter, status: bookingFilter });
       setBookings(data.bookings);
     } catch (err) {
       setError(err.message);
@@ -191,6 +250,19 @@ export default function AdminDashboard() {
     }
   }
 
+  async function loadDaySchedule(date = scheduleDate) {
+    setLoadingSchedule(true);
+
+    try {
+      const data = await api.getDaySchedule(date);
+      setDaySchedule(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingSchedule(false);
+    }
+  }
+
   async function handleStatusChange(bookingId, status) {
     try {
       const data = await api.updateBookingStatus(bookingId, status);
@@ -198,6 +270,7 @@ export default function AdminDashboard() {
         current.map((booking) => (booking._id === bookingId ? data.booking : booking))
       );
       loadPendingNotices({ silent: true });
+      loadDaySchedule(data.booking.appointmentDate);
       setMessage("Booking status updated.");
     } catch (err) {
       setError(err.message);
@@ -209,9 +282,65 @@ export default function AdminDashboard() {
 
     try {
       await api.deleteBooking(bookingId);
+      const deletedBooking = bookings.find((booking) => booking._id === bookingId);
       setBookings((current) => current.filter((booking) => booking._id !== bookingId));
       setPendingNotices((current) => current.filter((booking) => booking._id !== bookingId));
+      if (deletedBooking) {
+        loadDaySchedule(deletedBooking.appointmentDate);
+      }
       setMessage("Booking deleted.");
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  function handleAdminBookingFormChange(event) {
+    const { name, value } = event.target;
+
+    setAdminBookingForm((current) => ({
+      ...current,
+      [name]: value,
+      ...(name === "source" && value === "admin_block"
+        ? {
+            capacitySlots: current.capacitySlots || 4,
+            customerEmail: "",
+            customerPhone: "",
+            service: ""
+          }
+        : {})
+    }));
+  }
+
+  async function handleAdminBookingSubmit(event) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    const isBlock = adminBookingForm.source === "admin_block";
+    const payload = {
+      ...adminBookingForm,
+      capacitySlots: Number(adminBookingForm.capacitySlots || (isBlock ? 4 : 1)),
+      durationMinutes: Number(adminBookingForm.durationMinutes || 60)
+    };
+
+    if (!isBlock) {
+      delete payload.durationMinutes;
+      payload.capacitySlots = Number(adminBookingForm.capacitySlots || 1);
+    }
+
+    try {
+      const data = await api.createAdminBooking(payload);
+      setBookings((current) => [data.booking, ...current]);
+      setAdminBookingForm({
+        ...emptyAdminBookingForm,
+        appointmentDate: adminBookingForm.appointmentDate,
+        appointmentTime: adminBookingForm.appointmentTime
+      });
+      setScheduleDate(payload.appointmentDate);
+      loadBookings();
+      loadPendingNotices({ silent: true });
+      loadDaySchedule(payload.appointmentDate);
+      setMessage(isBlock ? "Time blocked on the salon schedule." : "Booking added to the salon schedule.");
     } catch (err) {
       setError(err.message);
     }
@@ -293,7 +422,14 @@ export default function AdminDashboard() {
           {admin?.email && <p className="admin-session">Signed in as {admin.email}</p>}
         </div>
         <div className="button-row dashboard-actions">
-          <button type="button" className="button button-secondary" onClick={() => loadBookings(bookingFilter)}>
+          <button
+            type="button"
+            className="button button-secondary"
+            onClick={() => {
+              loadBookings();
+              loadDaySchedule(scheduleDate);
+            }}
+          >
             <RefreshCw size={17} aria-hidden="true" />
             Refresh
           </button>
@@ -321,6 +457,10 @@ export default function AdminDashboard() {
           Confirmed
         </span>
         <span>
+          <strong>{dashboardStats.blockedBookings.length}</strong>
+          Blocks
+        </span>
+        <span>
           <strong>{dashboardStats.activeServices.length}</strong>
           Active services
         </span>
@@ -343,6 +483,251 @@ export default function AdminDashboard() {
           </span>
         </section>
       )}
+
+      <section className="operations-grid">
+        <form className="form-panel quick-booking-panel" onSubmit={handleAdminBookingSubmit}>
+          <div className="form-panel-header">
+            <div>
+              <span className="panel-label">Phone and floor</span>
+              <h2>Add to schedule</h2>
+            </div>
+            {adminBookingForm.source === "admin_block" ? (
+              <Ban size={22} aria-hidden="true" />
+            ) : (
+              <CalendarClock size={22} aria-hidden="true" />
+            )}
+          </div>
+
+          <div className="form-row">
+            <label>
+              Source
+              <select
+                name="source"
+                value={adminBookingForm.source}
+                onChange={handleAdminBookingFormChange}
+              >
+                <option value="phone">Phone</option>
+                <option value="walk_in">Walk-in</option>
+                <option value="admin_block">Block time</option>
+              </select>
+            </label>
+            <label>
+              Date
+              <input
+                type="date"
+                name="appointmentDate"
+                value={adminBookingForm.appointmentDate}
+                onChange={handleAdminBookingFormChange}
+                required
+              />
+            </label>
+          </div>
+
+          <div className="form-row">
+            <label>
+              Time
+              <select
+                name="appointmentTime"
+                value={adminBookingForm.appointmentTime}
+                onChange={handleAdminBookingFormChange}
+              >
+                {adminTimeOptions.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              {adminBookingForm.source === "admin_block" ? "Duration" : "Staff used"}
+              {adminBookingForm.source === "admin_block" ? (
+                <input
+                  type="number"
+                  name="durationMinutes"
+                  min="15"
+                  step="15"
+                  value={adminBookingForm.durationMinutes}
+                  onChange={handleAdminBookingFormChange}
+                  required
+                />
+              ) : (
+                <select
+                  name="capacitySlots"
+                  value={adminBookingForm.capacitySlots}
+                  onChange={handleAdminBookingFormChange}
+                >
+                  <option value="1">1 tech</option>
+                  <option value="2">2 techs</option>
+                  <option value="3">3 techs</option>
+                  <option value="4">4 techs</option>
+                </select>
+              )}
+            </label>
+          </div>
+
+          {adminBookingForm.source === "admin_block" ? (
+            <div className="form-row">
+              <label>
+                Label
+                <input
+                  type="text"
+                  name="customerName"
+                  value={adminBookingForm.customerName}
+                  onChange={handleAdminBookingFormChange}
+                  placeholder="Lunch break"
+                  required
+                />
+              </label>
+              <label>
+                Capacity
+                <select
+                  name="capacitySlots"
+                  value={adminBookingForm.capacitySlots}
+                  onChange={handleAdminBookingFormChange}
+                >
+                  <option value="1">1 tech</option>
+                  <option value="2">2 techs</option>
+                  <option value="3">3 techs</option>
+                  <option value="4">Whole salon</option>
+                </select>
+              </label>
+            </div>
+          ) : (
+            <>
+              <label>
+                Service
+                <select
+                  name="service"
+                  value={adminBookingForm.service}
+                  onChange={handleAdminBookingFormChange}
+                  required
+                >
+                  <option value="">Choose a service</option>
+                  {services
+                    .filter((service) => service.isActive)
+                    .map((service) => (
+                      <option key={service._id} value={service._id}>
+                        {service.name} · {service.durationMinutes} min
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <div className="form-row">
+                <label>
+                  Customer
+                  <input
+                    type="text"
+                    name="customerName"
+                    value={adminBookingForm.customerName}
+                    onChange={handleAdminBookingFormChange}
+                    placeholder="Customer name"
+                    required
+                  />
+                </label>
+                <label>
+                  Phone
+                  <input
+                    type="tel"
+                    name="customerPhone"
+                    value={adminBookingForm.customerPhone}
+                    onChange={handleAdminBookingFormChange}
+                    placeholder="08..."
+                    required
+                  />
+                </label>
+              </div>
+
+              <label>
+                Email optional
+                <input
+                  type="email"
+                  name="customerEmail"
+                  value={adminBookingForm.customerEmail}
+                  onChange={handleAdminBookingFormChange}
+                  placeholder="customer@example.com"
+                />
+              </label>
+            </>
+          )}
+
+          <label>
+            Notes
+            <textarea
+              name="notes"
+              rows="3"
+              value={adminBookingForm.notes}
+              onChange={handleAdminBookingFormChange}
+              placeholder="Preference, staff note, or reason for block"
+            />
+          </label>
+
+          <button type="submit" className="button button-primary">
+            <Plus size={17} aria-hidden="true" />
+            {adminBookingForm.source === "admin_block" ? "Block time" : "Add booking"}
+          </button>
+        </form>
+
+        <section className="admin-section day-schedule-panel">
+          <div className="admin-section-header">
+            <div>
+              <span className="panel-label">Capacity view</span>
+              <h2>Day schedule</h2>
+            </div>
+            <label className="compact-label">
+              Date
+              <input
+                type="date"
+                value={scheduleDate}
+                onChange={(event) => setScheduleDate(event.target.value)}
+              />
+            </label>
+          </div>
+
+          {loadingSchedule ? (
+            <LoadingState message="Loading day capacity..." />
+          ) : daySchedule ? (
+            <div className="schedule-list" aria-label="Day capacity by time">
+              {daySchedule.rows
+                .filter((row) => row.usedCapacity > 0)
+                .map((row) => (
+                  <article className="schedule-row" key={row.time}>
+                    <div className="schedule-time">
+                      <Clock3 size={16} aria-hidden="true" />
+                      <strong>{row.time}</strong>
+                    </div>
+                    <div className="capacity-meter" aria-label={`${row.usedCapacity} of ${daySchedule.salonCapacity} occupied`}>
+                      <span
+                        style={{
+                          width: `${Math.min(
+                            (row.usedCapacity / daySchedule.salonCapacity) * 100,
+                            100
+                          )}%`
+                        }}
+                      />
+                    </div>
+                    <span className={row.remainingCapacity === 0 ? "pill status-pill cancelled" : "pill"}>
+                      <Users size={14} aria-hidden="true" />
+                      {row.remainingCapacity} free
+                    </span>
+                    <div className="schedule-bookings">
+                      {row.bookings.map((booking) => (
+                        <span key={`${row.time}-${booking._id}`}>
+                          {booking.customerName} · {getSourceLabel(booking.source)}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              {daySchedule.rows.every((row) => row.usedCapacity === 0) && (
+                <p className="quiet-message">No bookings or blocks on this date yet.</p>
+              )}
+            </div>
+          ) : (
+            <p className="quiet-message">Choose a date to see capacity.</p>
+          )}
+        </section>
+      </section>
 
       <section className="admin-notice-panel" aria-live="polite">
         <div className="admin-notice-header">
@@ -419,6 +804,17 @@ export default function AdminDashboard() {
                 ))}
               </select>
             </label>
+            <label className="compact-label">
+              Source
+              <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+                <option value="">All</option>
+                {sourceOptions.map((source) => (
+                  <option key={source} value={source}>
+                    {getSourceLabel(source)}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
 
@@ -432,6 +828,7 @@ export default function AdminDashboard() {
                   <th>Customer</th>
                   <th>Service</th>
                   <th>Date</th>
+                  <th>Source</th>
                   <th>Status</th>
                   <th>Contact</th>
                   <th>Actions</th>
@@ -444,10 +841,21 @@ export default function AdminDashboard() {
                       <strong>{booking.customerName}</strong>
                       {booking.notes && <span className="table-note">{booking.notes}</span>}
                     </td>
-                    <td>{booking.service?.name || "Deleted service"}</td>
+                    <td>
+                      {booking.isBlock ? "Blocked time" : booking.service?.name || "Deleted service"}
+                      {booking.durationMinutes && (
+                        <span className="table-note">{booking.durationMinutes} min</span>
+                      )}
+                    </td>
                     <td>
                       {formatDate(booking.appointmentDate)}
                       <span className="table-note">{booking.appointmentTime}</span>
+                    </td>
+                    <td>
+                      <span className={`pill source-pill ${booking.source}`}>
+                        {getSourceLabel(booking.source)}
+                      </span>
+                      <span className="table-note">{booking.capacitySlots || 1} tech</span>
                     </td>
                     <td>
                       <span className={`pill status-pill ${booking.status}`}>
@@ -496,7 +904,7 @@ export default function AdminDashboard() {
                 ))}
                 {visibleBookings.length === 0 && (
                   <tr>
-                    <td colSpan="6" className="empty-cell">
+                    <td colSpan="7" className="empty-cell">
                       No bookings match this view.
                     </td>
                   </tr>

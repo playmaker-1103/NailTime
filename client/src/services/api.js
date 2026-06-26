@@ -86,12 +86,33 @@ export const api = {
     const query = new URLSearchParams({ date, service: serviceId });
     return request(`/bookings/availability?${query.toString()}`);
   },
-  getBookings(status = "") {
-    const query = status ? `?status=${status}` : "";
-    return request(`/bookings${query}`);
+  getBookings(filters = "") {
+    if (typeof filters === "string") {
+      const query = filters ? `?status=${filters}` : "";
+      return request(`/bookings${query}`);
+    }
+
+    const query = new URLSearchParams();
+
+    if (filters.status) query.set("status", filters.status);
+    if (filters.source) query.set("source", filters.source);
+    if (filters.date) query.set("date", filters.date);
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request(`/bookings${suffix}`);
   },
   getBooking(id) {
     return request(`/bookings/${id}`);
+  },
+  getDaySchedule(date) {
+    const query = new URLSearchParams({ date });
+    return request(`/bookings/schedule?${query.toString()}`);
+  },
+  createAdminBooking(booking) {
+    return request("/bookings/admin", {
+      method: "POST",
+      body: JSON.stringify(booking)
+    });
   },
   updateBookingStatus(id, status) {
     return request(`/bookings/${id}/status`, {

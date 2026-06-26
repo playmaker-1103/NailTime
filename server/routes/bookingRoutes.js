@@ -1,9 +1,11 @@
 const express = require("express");
 const {
+  createAdminBooking,
   createBooking,
   deleteBooking,
   getAvailability,
   getBookingById,
+  getDaySchedule,
   getBookings,
   updateBookingStatus
 } = require("../controllers/bookingController");
@@ -19,8 +21,10 @@ const bookingRequestLimiter = rateLimit({
 
 router.get("/", protect, getBookings);
 router.get("/availability", getAvailability);
+router.get("/schedule", protect, getDaySchedule);
 router.get("/:id", protect, getBookingById);
 router.post("/", bookingRequestLimiter, createBooking);
+router.post("/admin", protect, createAdminBooking);
 router.put("/:id/status", protect, updateBookingStatus);
 router.delete("/:id", protect, deleteBooking);
 

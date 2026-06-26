@@ -1097,6 +1097,30 @@ textarea:disabled {
   color: var(--completed-ink);
 }
 
+.source-pill {
+  margin-bottom: 8px;
+}
+
+.source-pill.online {
+  background: var(--surface-soft);
+  color: var(--honey-dark);
+}
+
+.source-pill.phone {
+  background: var(--sage-soft);
+  color: var(--sage-ink);
+}
+
+.source-pill.walk_in {
+  background: var(--completed-bg);
+  color: var(--completed-ink);
+}
+
+.source-pill.admin_block {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
 .dashboard {
   display: grid;
   gap: 24px;
@@ -1114,7 +1138,7 @@ textarea:disabled {
 
 .dashboard-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1165,6 +1189,84 @@ textarea:disabled {
 .next-booking-panel p {
   margin: 8px 0 0;
   color: var(--muted);
+  font-weight: 750;
+}
+
+.operations-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.quick-booking-panel {
+  padding: 22px;
+}
+
+.quick-booking-panel > .button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.day-schedule-panel {
+  min-height: 460px;
+}
+
+.schedule-list {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.schedule-row {
+  display: grid;
+  grid-template-columns: 76px minmax(120px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.schedule-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--honey-dark);
+}
+
+.capacity-meter {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.capacity-meter span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: var(--honey);
+}
+
+.schedule-bookings {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.schedule-bookings span {
+  display: inline-flex;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-tint);
+  color: var(--muted);
+  font-size: 0.86rem;
   font-weight: 750;
 }
 
@@ -1291,7 +1393,7 @@ textarea:disabled {
 
 table {
   width: 100%;
-  min-width: 860px;
+  min-width: 980px;
   border-collapse: collapse;
 }
 
@@ -1454,6 +1556,7 @@ th {
   .trust-strip,
   .benefit-strip,
   .admin-grid,
+  .operations-grid,
   .dashboard-summary,
   .footer-grid {
     grid-template-columns: 1fr;
@@ -1486,6 +1589,14 @@ th {
   .next-booking-panel {
     grid-template-columns: 1fr;
     align-items: start;
+  }
+
+  .schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-bookings {
+    grid-column: auto;
   }
 }
 

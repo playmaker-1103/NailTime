@@ -4,6 +4,7 @@ process.env.ADMIN_PASSWORD = "secret-password";
 process.env.JWT_SECRET = "test-jwt-secret";
 process.env.SUPABASE_URL = "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+process.env.SALON_STAFF_CAPACITY = "4";
 process.env.APPOINTMENT_SLOT_INTERVAL_MINUTES = "15";
 
 jest.mock("../config/supabase", () => require("./supabaseTestClient"));
@@ -210,6 +211,93 @@ test("up to four active bookings can overlap, then capacity rejects the next req
 
   expect(fifthResponse.status).toBe(409);
   expect(fifthResponse.body.message).toContain("fully booked");
+});
+
+test("admin phone bookings use the same capacity as online bookings", async () => {
+  const authHeader = await adminAuthHeader();
+  const service = createSampleService();
+  const date = futureDate(6);
+
+  const phoneResponse = await request(app)
+    .post("/api/bookings/admin")
+    .set(authHeader)
+    .send({
+      source: "phone",
+      service: service.id,
+      customerName: "Phone Customer",
+      customerEmail: "phone@example.com",
+      customerPhone: "089 000 0000",
+      appointmentDate: date,
+      appointmentTime: "11:00",
+      notes: "Booked over the phone"
+    });
+
+  expect(phoneResponse.status).toBe(201);
+  expect(phoneResponse.body.booking.source).toBe("phone");
+
+  for (let index = 0; index < 3; index += 1) {
+    const response = await request(app)
+      .post("/api/bookings")
+      .send(
+        bookingPayload(service, {
+          customerEmail: `online-after-phone-${index}@example.com`,
+          appointmentDate: date,
+          appointmentTime: "11:00"
+        })
+      );
+
+    expect(response.status).toBe(201);
+  }
+
+  const fifthResponse = await request(app)
+    .post("/api/bookings")
+    .send(
+      bookingPayload(service, {
+        customerEmail: "too-many@example.com",
+        appointmentDate: date,
+        appointmentTime: "11:00"
+      })
+    );
+
+  expect(fifthResponse.status).toBe(409);
+});
+
+test("admin block time removes matching online availability", async () => {
+  const authHeader = await adminAuthHeader();
+  const service = createSampleService();
+  const date = futureDate(7);
+
+  const blockResponse = await request(app)
+    .post("/api/bookings/admin")
+    .set(authHeader)
+    .send({
+      source: "admin_block",
+      customerName: "Lunch break",
+      appointmentDate: date,
+      appointmentTime: "12:00",
+      durationMinutes: 60,
+      capacitySlots: 4,
+      notes: "Team lunch"
+    });
+
+  expect(blockResponse.status).toBe(201);
+  expect(blockResponse.body.booking.isBlock).toBe(true);
+  expect(blockResponse.body.booking.capacitySlots).toBe(4);
+
+  const availabilityResponse = await request(app).get(
+    `/api/bookings/availability?date=${date}&service=${service.id}`
+  );
+
+  expect(availabilityResponse.status).toBe(200);
+  expect(availabilityResponse.body.availableTimes).not.toContain("12:00");
+  expect(availabilityResponse.body.availableTimes).not.toContain("12:15");
+
+  const scheduleResponse = await request(app)
+    .get(`/api/bookings/schedule?date=${date}`)
+    .set(authHeader);
+
+  expect(scheduleResponse.status).toBe(200);
+  expect(scheduleResponse.body.rows.find((row) => row.time === "12:00").remainingCapacity).toBe(0);
 });
 
 test("admin can filter bookings and update booking status with a JWT", async () => {

@@ -68,7 +68,7 @@ function normalizeServicePayload(payload) {
 function normalizeBookingPayload(payload) {
   return {
     id: payload.id || crypto.randomUUID(),
-    service_id: payload.service_id,
+    service_id: payload.service_id || null,
     customer_name: payload.customer_name,
     customer_email: payload.customer_email,
     customer_phone: payload.customer_phone,
@@ -76,9 +76,68 @@ function normalizeBookingPayload(payload) {
     appointment_time: normalizeTime(payload.appointment_time),
     notes: payload.notes || "",
     status: payload.status || "confirmed",
+    source: payload.source || "online",
+    duration_minutes:
+      payload.duration_minutes ||
+      db.services.find((service) => service.id === payload.service_id)?.duration_minutes ||
+      15,
+    capacity_slots: payload.capacity_slots || 1,
     created_at: payload.created_at || now(),
     updated_at: payload.updated_at || now()
   };
+}
+
+function timeToMinutes(time) {
+  const [hours, minutes] = normalizeTime(time).split(":").map(Number);
+
+  return hours * 60 + minutes;
+}
+
+function bookingRange(booking) {
+  const startMinutes = timeToMinutes(booking.appointment_time);
+
+  return {
+    startMinutes,
+    endMinutes: startMinutes + Number(booking.duration_minutes || 15)
+  };
+}
+
+function activeBookingsForDate(date) {
+  return db.bookings.filter(
+    (booking) =>
+      booking.appointment_date === date &&
+      ["pending", "confirmed", "completed"].includes(booking.status)
+  );
+}
+
+function hasCapacityForBooking(payload) {
+  if (!["pending", "confirmed", "completed"].includes(payload.status || "confirmed")) {
+    return true;
+  }
+
+  const intervalMinutes = Number(process.env.APPOINTMENT_SLOT_INTERVAL_MINUTES || 15);
+  const salonCapacity = Number(payload.p_salon_capacity || process.env.SALON_STAFF_CAPACITY || 4);
+  const capacitySlots = Number(payload.p_capacity_slots || 1);
+  const startMinutes = timeToMinutes(payload.p_appointment_time);
+  const durationMinutes = Number(payload.p_duration_minutes || 15);
+  const endMinutes = startMinutes + durationMinutes;
+  const bookings = activeBookingsForDate(payload.p_appointment_date);
+
+  for (let segmentStart = startMinutes; segmentStart < endMinutes; segmentStart += intervalMinutes) {
+    const segmentEnd = Math.min(segmentStart + intervalMinutes, endMinutes);
+    const usedCapacity = bookings.reduce((total, booking) => {
+      const range = bookingRange(booking);
+      const overlaps = range.startMinutes < segmentEnd && range.endMinutes > segmentStart;
+
+      return overlaps ? total + Number(booking.capacity_slots || 1) : total;
+    }, 0);
+
+    if (usedCapacity + capacitySlots > salonCapacity) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 class QueryBuilder {
@@ -249,6 +308,46 @@ const supabaseTestClient = {
     const booking = normalizeBookingPayload(payload);
     db.bookings.push(booking);
     return booking;
+  },
+  rpc(functionName, payload) {
+    if (functionName !== "create_booking_with_capacity") {
+      return Promise.resolve({ data: null, error: { message: "Unknown RPC" } });
+    }
+
+    const service = payload.p_service_id
+      ? db.services.find((item) => item.id === payload.p_service_id && item.is_active)
+      : null;
+    const durationMinutes = payload.p_duration_minutes || service?.duration_minutes;
+
+    if (payload.p_service_id && !service) {
+      return Promise.resolve({ data: null, error: { code: "22023", message: "active_service_not_found" } });
+    }
+
+    if (!durationMinutes || durationMinutes < 1) {
+      return Promise.resolve({ data: null, error: { code: "22023", message: "invalid_duration_minutes" } });
+    }
+
+    if (!hasCapacityForBooking({ ...payload, p_duration_minutes: durationMinutes })) {
+      return Promise.resolve({ data: null, error: { code: "23505", message: "booking_capacity_exceeded" } });
+    }
+
+    const booking = normalizeBookingPayload({
+      service_id: payload.p_service_id,
+      customer_name: payload.p_customer_name,
+      customer_email: payload.p_customer_email,
+      customer_phone: payload.p_customer_phone,
+      appointment_date: payload.p_appointment_date,
+      appointment_time: payload.p_appointment_time,
+      notes: payload.p_notes,
+      status: payload.p_status,
+      source: payload.p_source,
+      duration_minutes: durationMinutes,
+      capacity_slots: payload.p_capacity_slots
+    });
+
+    db.bookings.push(booking);
+
+    return Promise.resolve({ data: booking, error: null });
   },
   from(table) {
     return new QueryBuilder(table);

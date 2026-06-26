@@ -2,11 +2,14 @@ const supabase = require("../config/supabase");
 const { mapBooking, mapBookingPayload, normalizeTime } = require("../utils/dbMappers");
 
 const bookingStatuses = ["pending", "confirmed", "cancelled", "completed"];
+const bookingSources = ["online", "phone", "walk_in", "admin_block"];
 const activeBookingStatuses = ["pending", "confirmed", "completed"];
 const SLOT_INTERVAL_MINUTES = Number(process.env.APPOINTMENT_SLOT_INTERVAL_MINUTES || 15);
 const OPENING_TIME = "09:00";
 const CLOSING_TIME = "18:00";
 const SALON_STAFF_CAPACITY = Number(process.env.SALON_STAFF_CAPACITY || 4);
+const BLOCK_EMAIL = "admin@honeynails.local";
+const BLOCK_PHONE = "admin-block";
 
 function isValidUuid(id) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
@@ -66,6 +69,13 @@ function isBookableTimeSlot(time, durationMinutes = SLOT_INTERVAL_MINUTES) {
   );
 }
 
+function minutesToTime(minutes) {
+  const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+  const mins = String(minutes % 60).padStart(2, "0");
+
+  return `${hours}:${mins}`;
+}
+
 function generateTimeSlots(durationMinutes = SLOT_INTERVAL_MINUTES) {
   const slots = [];
   const openingMinutes = timeToMinutes(OPENING_TIME);
@@ -81,18 +91,31 @@ function generateTimeSlots(durationMinutes = SLOT_INTERVAL_MINUTES) {
   return slots;
 }
 
-function validateBookingInput(body, serviceDurationMinutes = SLOT_INTERVAL_MINUTES) {
+function validateBookingInput(body, serviceDurationMinutes = SLOT_INTERVAL_MINUTES, options = {}) {
   const errors = [];
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const isBlock = options.source === "admin_block";
 
-  if (!body.service) errors.push("Service is required");
+  if (!isBlock && !body.service) errors.push("Service is required");
   if (!body.customerName || !body.customerName.trim()) errors.push("Customer name is required");
-  if (!body.customerEmail || !emailPattern.test(body.customerEmail)) {
+  if (
+    !isBlock &&
+    !options.allowMissingEmail &&
+    (!body.customerEmail || !emailPattern.test(body.customerEmail))
+  ) {
     errors.push("A valid customer email is required");
   }
-  if (!body.customerPhone || !body.customerPhone.trim()) errors.push("Customer phone is required");
+  if (!isBlock && (!body.customerPhone || !body.customerPhone.trim())) {
+    errors.push("Customer phone is required");
+  }
   if (!body.appointmentDate) errors.push("Appointment date is required");
   if (!body.appointmentTime) errors.push("Appointment time is required");
+  if (options.source && !bookingSources.includes(options.source)) {
+    errors.push("Invalid booking source");
+  }
+  if (options.capacitySlots && Number(options.capacitySlots) > SALON_STAFF_CAPACITY) {
+    errors.push(`Capacity slots cannot exceed ${SALON_STAFF_CAPACITY}`);
+  }
   if (body.appointmentDate && !isValidDateString(body.appointmentDate)) {
     errors.push("Appointment date must use YYYY-MM-DD format");
   } else if (body.appointmentDate && isPastDate(body.appointmentDate)) {
@@ -108,7 +131,11 @@ function validateBookingInput(body, serviceDurationMinutes = SLOT_INTERVAL_MINUT
 }
 
 function getBookingDurationMinutes(booking) {
-  return Number(booking.service?.duration_minutes || SLOT_INTERVAL_MINUTES);
+  return Number(booking.duration_minutes || booking.service?.duration_minutes || SLOT_INTERVAL_MINUTES);
+}
+
+function getBookingCapacitySlots(booking) {
+  return Number(booking.capacity_slots || 1);
 }
 
 function getBookingRange(booking) {
@@ -121,16 +148,18 @@ function getBookingRange(booking) {
 }
 
 function hasSegmentCapacity(segmentStartMinutes, segmentEndMinutes, activeBookings) {
-  const overlappingBookings = activeBookings.filter((booking) => {
+  const usedCapacity = activeBookings.reduce((total, booking) => {
     const bookingRange = getBookingRange(booking);
+    const overlaps =
+      bookingRange.startMinutes < segmentEndMinutes && bookingRange.endMinutes > segmentStartMinutes;
 
-    return bookingRange.startMinutes < segmentEndMinutes && bookingRange.endMinutes > segmentStartMinutes;
-  });
+    return overlaps ? total + getBookingCapacitySlots(booking) : total;
+  }, 0);
 
-  return overlappingBookings.length < SALON_STAFF_CAPACITY;
+  return usedCapacity < SALON_STAFF_CAPACITY;
 }
 
-function hasCapacityForService(startTime, serviceDurationMinutes, activeBookings) {
+function hasCapacityForService(startTime, serviceDurationMinutes, activeBookings, capacitySlots = 1) {
   const startMinutes = timeToMinutes(startTime);
   const endMinutes = startMinutes + serviceDurationMinutes;
 
@@ -140,8 +169,14 @@ function hasCapacityForService(startTime, serviceDurationMinutes, activeBookings
     segmentStart += SLOT_INTERVAL_MINUTES
   ) {
     const segmentEnd = Math.min(segmentStart + SLOT_INTERVAL_MINUTES, endMinutes);
+    const usedCapacity = activeBookings.reduce((total, booking) => {
+      const bookingRange = getBookingRange(booking);
+      const overlaps = bookingRange.startMinutes < segmentEnd && bookingRange.endMinutes > segmentStart;
 
-    if (!hasSegmentCapacity(segmentStart, segmentEnd, activeBookings)) {
+      return overlaps ? total + getBookingCapacitySlots(booking) : total;
+    }, 0);
+
+    if (usedCapacity + capacitySlots > SALON_STAFF_CAPACITY) {
       return false;
     }
   }
@@ -156,7 +191,7 @@ function getUnavailableTimesForService(allTimes, serviceDurationMinutes, activeB
 async function getActiveBookingsForDate(date) {
   const { data, error } = await supabase
     .from("bookings")
-    .select("appointment_time, status, service:services(duration_minutes)")
+    .select("id, appointment_time, status, source, duration_minutes, capacity_slots, service:services(duration_minutes)")
     .eq("appointment_date", date)
     .in("status", activeBookingStatuses);
 
@@ -165,6 +200,16 @@ async function getActiveBookingsForDate(date) {
   }
 
   return data;
+}
+
+async function fetchBookingWithService(bookingId) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*, service:services(*)")
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  return { booking: data, error };
 }
 
 async function getActiveService(serviceId) {
@@ -241,13 +286,49 @@ async function getAvailability(req, res) {
   }
 }
 
+function buildRpcPayload(body, options) {
+  return {
+    p_service_id: body.service || null,
+    p_customer_name: body.customerName,
+    p_customer_email: body.customerEmail,
+    p_customer_phone: body.customerPhone,
+    p_appointment_date: body.appointmentDate,
+    p_appointment_time: body.appointmentTime,
+    p_notes: body.notes || "",
+    p_status: options.status || "confirmed",
+    p_source: options.source || "online",
+    p_duration_minutes: options.durationMinutes || null,
+    p_capacity_slots: options.capacitySlots || 1,
+    p_salon_capacity: SALON_STAFF_CAPACITY
+  };
+}
+
+async function createBookingWithCapacity(body, options = {}) {
+  const { data: createdBooking, error: rpcError } = await supabase.rpc(
+    "create_booking_with_capacity",
+    buildRpcPayload(body, options)
+  );
+
+  if (rpcError) {
+    throw rpcError;
+  }
+
+  return fetchBookingWithService(createdBooking.id);
+}
+
 async function getBookings(req, res) {
   try {
-    const { status } = req.query;
+    const { date, source, status } = req.query;
     if (status) {
       if (!bookingStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid booking status" });
       }
+    }
+    if (source && !bookingSources.includes(source)) {
+      return res.status(400).json({ message: "Invalid booking source" });
+    }
+    if (date && !isValidDateString(date)) {
+      return res.status(400).json({ message: "Date must use YYYY-MM-DD format" });
     }
 
     let query = supabase
@@ -259,6 +340,12 @@ async function getBookings(req, res) {
 
     if (status) {
       query = query.eq("status", status);
+    }
+    if (source) {
+      query = query.eq("source", source);
+    }
+    if (date) {
+      query = query.eq("appointment_date", date);
     }
 
     const { data, error } = await query;
@@ -322,25 +409,10 @@ async function createBooking(req, res) {
       return res.status(400).json({ message: errors.join(". ") });
     }
 
-    const activeBookings = await getActiveBookingsForDate(req.body.appointmentDate);
-    const hasCapacity = hasCapacityForService(
-      req.body.appointmentTime,
-      serviceDurationMinutes,
-      activeBookings
-    );
-
-    if (!hasCapacity) {
-      return res.status(409).json({
-        message:
-          "The salon is fully booked for this service at that time. Please choose another time."
-      });
-    }
-
-    const { data: booking, error: bookingError } = await supabase
-      .from("bookings")
-      .insert({ ...mapBookingPayload(req.body), status: "confirmed" })
-      .select("*, service:services(*)")
-      .single();
+    const { booking, error: bookingError } = await createBookingWithCapacity(req.body, {
+      durationMinutes: serviceDurationMinutes,
+      source: "online"
+    });
 
     if (bookingError) {
       if (bookingError.code === "23505") {
@@ -355,7 +427,7 @@ async function createBooking(req, res) {
 
     return res.status(201).json({ booking: mapBooking(booking) });
   } catch (error) {
-    if (error.code === "23505") {
+    if (error.code === "23505" || error.message === "booking_capacity_exceeded") {
       return res.status(409).json({
         message:
           "The salon is fully booked for this service at that time. Please choose another time."
@@ -363,6 +435,145 @@ async function createBooking(req, res) {
     }
 
     return res.status(500).json({ message: "Could not create booking" });
+  }
+}
+
+async function createAdminBooking(req, res) {
+  try {
+    const source = req.body.source || "phone";
+    const isBlock = source === "admin_block";
+
+    if (!bookingSources.includes(source) || source === "online") {
+      return res.status(400).json({ message: "Admin booking source must be phone, walk_in, or admin_block" });
+    }
+
+    let service = null;
+    let serviceDurationMinutes = Number(req.body.durationMinutes || SLOT_INTERVAL_MINUTES);
+
+    if (!isBlock) {
+      if (!isValidUuid(req.body.service)) {
+        return res.status(400).json({ message: "Invalid service id" });
+      }
+
+      const result = await getActiveService(req.body.service);
+      service = result.service;
+
+      if (result.error) {
+        return res.status(500).json({ message: "Could not create booking" });
+      }
+
+      if (!service) {
+        return res.status(404).json({ message: "Active service not found" });
+      }
+
+      serviceDurationMinutes = Number(service.duration_minutes);
+    }
+
+    const capacitySlots = isBlock
+      ? Number(req.body.capacitySlots || SALON_STAFF_CAPACITY)
+      : Number(req.body.capacitySlots || 1);
+    const body = {
+      ...req.body,
+      customerName: isBlock ? req.body.customerName || "Blocked time" : req.body.customerName,
+      customerEmail: isBlock ? BLOCK_EMAIL : req.body.customerEmail || "no-email@honeynails.local",
+      customerPhone: isBlock ? BLOCK_PHONE : req.body.customerPhone,
+      service: isBlock ? null : req.body.service
+    };
+    const errors = validateBookingInput(body, serviceDurationMinutes, {
+      allowMissingEmail: true,
+      capacitySlots,
+      source
+    });
+
+    if (errors.length > 0) {
+      return res.status(400).json({ message: errors.join(". ") });
+    }
+
+    const { booking, error: bookingError } = await createBookingWithCapacity(body, {
+      capacitySlots,
+      durationMinutes: serviceDurationMinutes,
+      source
+    });
+
+    if (bookingError) {
+      if (bookingError.code === "23505") {
+        return res.status(409).json({
+          message: "The salon is fully booked for this time. Choose another slot or reduce blocked capacity."
+        });
+      }
+
+      return res.status(500).json({ message: "Could not create booking" });
+    }
+
+    return res.status(201).json({ booking: mapBooking(booking) });
+  } catch (error) {
+    if (error.code === "23505" || error.message === "booking_capacity_exceeded") {
+      return res.status(409).json({
+        message: "The salon is fully booked for this time. Choose another slot or reduce blocked capacity."
+      });
+    }
+
+    return res.status(500).json({ message: "Could not create booking" });
+  }
+}
+
+async function getDaySchedule(req, res) {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ message: "Date is required" });
+    }
+
+    if (!isValidDateString(date)) {
+      return res.status(400).json({ message: "Date must use YYYY-MM-DD format" });
+    }
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, service:services(*)")
+      .eq("appointment_date", date)
+      .in("status", activeBookingStatuses)
+      .order("appointment_time", { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ message: "Could not fetch schedule" });
+    }
+
+    const openingMinutes = timeToMinutes(OPENING_TIME);
+    const closingMinutes = timeToMinutes(CLOSING_TIME);
+    const rows = [];
+
+    for (let minutes = openingMinutes; minutes < closingMinutes; minutes += SLOT_INTERVAL_MINUTES) {
+      const segmentEnd = minutes + SLOT_INTERVAL_MINUTES;
+      const overlapping = data.filter((booking) => {
+        const bookingRange = getBookingRange(booking);
+
+        return bookingRange.startMinutes < segmentEnd && bookingRange.endMinutes > minutes;
+      });
+      const usedCapacity = overlapping.reduce(
+        (total, booking) => total + getBookingCapacitySlots(booking),
+        0
+      );
+
+      rows.push({
+        time: minutesToTime(minutes),
+        usedCapacity,
+        remainingCapacity: Math.max(SALON_STAFF_CAPACITY - usedCapacity, 0),
+        bookings: overlapping.map(mapBooking)
+      });
+    }
+
+    return res.json({
+      date,
+      openingTime: OPENING_TIME,
+      closingTime: CLOSING_TIME,
+      salonCapacity: SALON_STAFF_CAPACITY,
+      slotIntervalMinutes: SLOT_INTERVAL_MINUTES,
+      rows
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Could not fetch schedule" });
   }
 }
 
@@ -374,6 +585,41 @@ async function updateBookingStatus(req, res) {
 
     if (!bookingStatuses.includes(req.body.status)) {
       return res.status(400).json({ message: "Invalid booking status" });
+    }
+
+    const { data: existingBooking, error: existingError } = await supabase
+      .from("bookings")
+      .select("*, service:services(*)")
+      .eq("id", req.params.id)
+      .maybeSingle();
+
+    if (existingError) {
+      return res.status(500).json({ message: "Could not update booking status" });
+    }
+
+    if (!existingBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (
+      activeBookingStatuses.includes(req.body.status) &&
+      !activeBookingStatuses.includes(existingBooking.status)
+    ) {
+      const activeBookings = (await getActiveBookingsForDate(existingBooking.appointment_date)).filter(
+        (booking) => booking.id !== existingBooking.id
+      );
+      const hasCapacity = hasCapacityForService(
+        normalizeTime(existingBooking.appointment_time),
+        getBookingDurationMinutes(existingBooking),
+        activeBookings,
+        getBookingCapacitySlots(existingBooking)
+      );
+
+      if (!hasCapacity) {
+        return res.status(409).json({
+          message: "The salon is fully booked for this appointment time."
+        });
+      }
     }
 
     const { data, error } = await supabase
@@ -425,12 +671,15 @@ async function deleteBooking(req, res) {
 }
 
 module.exports = {
+  bookingSources,
   bookingStatuses,
+  createAdminBooking,
   createBooking,
   deleteBooking,
   getAvailability,
   getBookingById,
   getBookings,
+  getDaySchedule,
   generateTimeSlots,
   hasCapacityForService,
   isBookableTimeSlot,

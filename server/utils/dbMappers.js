@@ -32,6 +32,10 @@ function mapBooking(booking) {
     customerPhone: booking.customer_phone,
     appointmentDate: booking.appointment_date,
     appointmentTime: normalizeTime(booking.appointment_time),
+    source: booking.source || "online",
+    durationMinutes: booking.duration_minutes || booking.service?.duration_minutes || null,
+    capacitySlots: booking.capacity_slots || 1,
+    isBlock: booking.source === "admin_block",
     notes: booking.notes || "",
     status: booking.status,
     createdAt: booking.created_at,
@@ -57,7 +61,10 @@ function mapBookingPayload(body) {
     customer_phone: body.customerPhone.trim(),
     appointment_date: body.appointmentDate,
     appointment_time: body.appointmentTime,
-    notes: body.notes || ""
+    notes: body.notes || "",
+    source: body.source || "online",
+    duration_minutes: body.durationMinutes ? Number(body.durationMinutes) : undefined,
+    capacity_slots: body.capacitySlots ? Number(body.capacitySlots) : 1
   };
 }
 
